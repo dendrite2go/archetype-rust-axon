@@ -284,6 +284,7 @@ dependencies = [
  "sha2",
  "tokio",
  "tonic",
+ "tonic-build",
  "uuid",
 ]
 
