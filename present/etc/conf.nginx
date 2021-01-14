@@ -1,0 +1,12 @@
+events {
+}
+
+http {
+    include             mime-types.nginx;
+    index               index.html;
+    default_type        text/html;
+    server {
+        listen          3000;
+        root            /usr/share/nginx/html;
+    }
+}

@@ -1,0 +1,137 @@
+node:
+  id: rustic_hub
+  cluster: test_cluster
+
+static_resources:
+  listeners:
+    - name: listener_web
+      address:
+        socket_address:
+          protocol: TCP
+          address: 0.0.0.0
+          port_value: 80
+      filter_chains:
+        - filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                stat_prefix: ingress_web_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: local_web_service
+                      domains: ["*"]
+                      routes:
+                        - match:
+                            prefix: "/"
+                            headers:
+                              - name: Content-Type
+                                exact_match : application/grpc-web-text
+                          route:
+                            host_rewrite: rustic-command-api
+                            cluster: service_core
+                            max_grpc_timeout: 0s
+                            cors:
+                              allow_origin_string_match:
+                                - prefix: "*"
+                              allow_methods: GET, PUT, DELETE, POST, OPTIONS
+                              allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
+                              max_age: "1728000"
+                              expose_headers: custom-header-1,grpc-status,grpc-message
+                        - match:
+                            prefix: "/"
+                            grpc: {}
+                          route:
+                            host_rewrite: rustic-command-api
+                            cluster: service_core
+                        - match:
+                            prefix: "/"
+                          route:
+                            host_rewrite: rustic-present
+                            cluster: service_present
+                http_filters:
+                  - name: envoy.cors
+                  - name: envoy.grpc_web
+                  - name: envoy.router
+    - name: listener_axon
+      address:
+        socket_address:
+          protocol: TCP
+          address: 0.0.0.0
+          port_value: 8124
+      filter_chains:
+        - filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                stat_prefix: ingress_axon_http
+                stream_idle_timeout:
+                  seconds: 0
+                  nanos: 0
+                route_config:
+                  name: local_axon_route
+                  virtual_hosts:
+                    - name: local_axon_service
+                      domains: ["*"]
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            host_rewrite: axon-server
+                            cluster: service_axon
+                http_filters:
+                  - name: envoy.grpc_web
+                  - name: envoy.router
+  clusters:
+    - name: service_present
+      connect_timeout: 0.25s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: service_present
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: rustic-present
+                      port_value: 3000
+    - name: service_axon
+      connect_timeout: 0.25s
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: service_axon
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: axon-server
+                      port_value: 8124
+    - name: service_core
+      connect_timeout: 0.25s
+      lb_policy: ROUND_ROBIN
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: service_core
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: rustic-command-api
+                      port_value: 8181
+
+admin:
+  access_log_path: /tmp/admin_access.log
+  address:
+    socket_address:
+      protocol: TCP
+      address: 127.0.0.1
+      port_value: 9901

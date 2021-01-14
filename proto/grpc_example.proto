@@ -1,0 +1,170 @@
+syntax = "proto3";
+//package org.leialearns.grpc.example;
+package grpc_example;
+
+// API
+
+/* The GreeterService defines the gRPC requests for greeting AxonServer. */
+service GreeterService {
+    rpc Greet (Greeting) returns (Acknowledgement) {}
+    rpc Record (Empty) returns (Empty) {}
+    rpc Stop (Empty) returns (Empty) {}
+    rpc Greetings (Empty) returns (stream Greeting) {}
+    rpc Search (SearchQuery) returns (stream Greeting) {}
+/*
+    rpc Time (AccessToken) returns (Greeting) {}
+
+    rpc ListTrustedKeys (Empty) returns (stream PublicKey) {}
+    rpc ChangeTrustedKeys (stream TrustedKeyRequest) returns (stream TrustedKeyResponse) {}
+    rpc SetPrivateKey(PrivateKey) returns (Empty) {}
+    rpc ChangeCredentials(stream Credentials) returns (Empty) {}
+    rpc Authorize (Credentials) returns (AccessToken) {}
+    rpc SetProperty (KeyValue) returns (Empty) {}
+*/
+}
+
+message Greeting {
+    string message = 1;
+}
+
+message Acknowledgement {
+    string message = 1;
+}
+
+message Empty {}
+
+//  Aggregates
+
+message GreeterProjection {
+    bool isRecording = 1;
+}
+
+//  Commands
+
+message GreetCommand {
+    string aggregateIdentifier = 1;
+    Greeting message = 2;
+}
+
+message RecordCommand {
+    string aggregateIdentifier = 1;
+}
+
+message StopCommand {
+    string aggregateIdentifier = 1;
+}
+
+message RegisterTrustedKeyCommand {
+    PublicKey publicKey = 1;
+}
+
+message RegisterKeyManagerCommand {
+    PublicKey publicKey = 1;
+}
+
+message RegisterCredentialsCommand {
+    Credentials credentials = 1;
+}
+
+message ChangePropertyCommand {
+    KeyValue property = 1;
+}
+
+// Events
+
+message GreetedEvent {
+    Greeting message = 1;
+}
+
+message StartedRecordingEvent {}
+
+message StoppedRecordingEvent {}
+
+message TrustedKeyAddedEvent {
+    PublicKey publicKey = 1;
+}
+
+message TrustedKeyRemovedEvent {
+    string name = 1;
+}
+
+message KeyManagerAddedEvent {
+    PublicKey publicKey = 1;
+}
+
+message KeyManagerRemovedEvent {
+    string name = 1;
+}
+
+message CredentialsAddedEvent {
+    Credentials credentials = 1;
+}
+
+message CredentialsRemovedEvent {
+    string identifier = 1;
+}
+
+message PropertyChangedEvent {
+    KeyValue property = 1;
+}
+
+// Queries
+
+message SearchQuery {
+    string query = 1;
+}
+
+message SearchResponse {
+    repeated Greeting greetings = 1;
+}
+
+// Access management
+
+message PublicKey {
+    string publicKey = 1;
+    string name = 2;
+}
+
+message PrivateKey {
+    string privateKey = 1;
+    string name = 2;
+}
+
+message AccessToken {
+    string jwt = 1;
+}
+
+message TrustedKeyRequest {
+    PublicKey publicKey = 1;
+    bytes nonce = 2;
+    Signature signature = 4;
+    bool isKeyManager = 5;
+}
+
+message TrustedKeyResponse {
+    Status status = 1;
+    bytes nonce = 2;
+}
+
+message Signature {
+    string format = 1;
+    bytes blob = 2;
+    bytes rest = 3;
+    string signatureName = 4;
+}
+
+message Status {
+    int32 code = 1;
+    string message = 2;
+}
+
+message Credentials {
+    string identifier = 1;
+    string secret = 2;
+    Signature signature = 3;
+}
+
+message KeyValue {
+    string key = 1;
+    string value = 2;
+}

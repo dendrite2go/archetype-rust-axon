@@ -1,0 +1,99 @@
+version: '3.7'
+
+networks:
+  ${ENSEMBLE_NAME}:
+    driver: overlay
+
+services:
+  axon-server:
+    image: axoniq/axonserver:${AXON_VERSION}
+    init: true
+    networks:
+    - ${ENSEMBLE_NAME}
+    ports:
+    - target: 8024
+      published: ${AXON_SERVER_PORT}
+    expose:
+    - "8024"
+    - "8124"
+    volumes:
+    -
+      type: volume
+      source: axon-data
+      target: /data
+    -
+      type: volume
+      source: axon-eventdata
+      target: /eventdata
+  ${ENSEMBLE_NAME}-command-api:
+    image: rust:latest
+    working_dir: ${PROJECT}/target
+    command:
+      - "debug/dendrite"
+    environment:
+      - "RUST_LOG=info,dendrite=debug"
+      - "RUST_BACKTRACE=1"
+    init: true
+    hostname: ${ENSEMBLE_NAME}
+    networks:
+    - ${ENSEMBLE_NAME}
+    ports:
+    - target: 8181
+      published: ${API_SERVER_PORT}
+    depends_on:
+    - axon-server
+    - proxy
+    volumes:
+      - type: bind
+        source: ${PROJECT}/target
+        target: ${PROJECT}/target
+      #${EXTRA_VOLUMES}
+  ${ENSEMBLE_NAME}-present:
+    image: ${DOCKER_REPOSITORY}/${ENSEMBLE_NAME}-present:${ENSEMBLE_IMAGE_VERSION}${PRESENT_SUFFIX}
+    networks:
+      - ${ENSEMBLE_NAME}
+    expose:
+      - "3000"
+    depends_on:
+      - axon-server
+    #${PRESENT_VOLUMES}
+  proxy:
+    image: ${DOCKER_REPOSITORY}/${ENSEMBLE_NAME}-proxy:${ENSEMBLE_IMAGE_VERSION}
+    networks:
+      - ${ENSEMBLE_NAME}
+    ports:
+      - target: 80
+        published: ${UI_SERVER_PORT}
+    depends_on:
+      - axon-server
+#  grpc-swagger:
+#    image: ${DOCKER_REPOSITORY}/grpc-swagger
+#    networks:
+#      - ${ENSEMBLE_NAME}
+#    ports:
+#      - target: '8080'
+#        published: '8123'
+  elastic-search:
+    image: elasticsearch:${ELASTIC_SEARCH_VERSION}
+    init: true
+    networks:
+      - ${ENSEMBLE_NAME}
+    ports:
+    - target: '9200'
+      published: '9200'
+    - target: '9300'
+      published: '9300'
+    environment:
+      - "discovery.type=single-node"
+    volumes:
+      - type: volume
+        source: elastic-search-data
+        target: /usr/share/elasticsearch/data
+
+volumes:
+  axon-data:
+  axon-eventdata:
+  elastic-search-data:
+  ${NIX_STORE_VOLUME}:
+    external: true
+

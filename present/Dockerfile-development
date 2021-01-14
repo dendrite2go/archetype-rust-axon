@@ -1,0 +1,4 @@
+FROM node:11.9
+MAINTAINER Jeroen van Maanen <jeroen@leialearns.org>
+
+ENTRYPOINT ["npm","start"]
