@@ -1,9 +1,9 @@
 use anyhow::{Context,Result};
 use dendrite::axon_utils::{AxonServerHandle, HandlerRegistry, QueryContext, QueryResult, TheHandlerRegistry, empty_handler_registry, query_processor, axon_serialize};
-use dendrite::elastic_search_utils::wait_for_elastic_search;
 use elasticsearch::{Elasticsearch, SearchParts};
 use log::{debug,error};
 use prost::Message;
+use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::grpc_example::{SearchQuery,SearchResponse,Greeting};
 
 #[derive(Clone)]

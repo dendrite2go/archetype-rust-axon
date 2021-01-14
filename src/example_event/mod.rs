@@ -1,11 +1,11 @@
 use anyhow::{anyhow,Context,Result};
 use dendrite::axon_utils::{AsyncApplicableTo, AxonServerHandle, HandlerRegistry, TheHandlerRegistry, TokenStore, event_processor, empty_handler_registry};
-use dendrite::elastic_search_utils::wait_for_elastic_search;
 use elasticsearch::{Elasticsearch, IndexParts, GetParts};
 use log::{debug,error};
 use prost::Message;
 use serde_json::{json, Value};
 use sha2::{Sha256, Digest};
+use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::grpc_example::{GreetedEvent,Greeting};
 
 #[derive(Clone)]

@@ -9,3 +9,4 @@ pub mod example_api;
 pub mod example_command;
 pub mod example_event;
 pub mod example_query;
+pub mod elastic_search_utils;
