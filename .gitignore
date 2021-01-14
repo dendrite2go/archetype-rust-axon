@@ -1,0 +1,11 @@
+*-local.*
+/docker/docker-compose.yml
+
+/present/src/grpc/
+/present/node_modules/
+/present/build/
+
+/target/
+**/*.rs.bk
+
+/.idea/
