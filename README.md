@@ -25,29 +25,3 @@ In alphabetic order:
 * [React](https://reactjs.org/): A JavaScript library for building user interfaces — _for the front-end_
 * [Rust](https://www.rust-lang.org): A language empowering everyone to build reliable and efficient software — _for the back-end_
 * [Tonic](https://github.com/hyperium/tonic): A Rust implementation of [gRPC](https://grpc.io/) with first class support of async/await — _for the plumbing on the back-end_
-
-## Status
-
-This project has now reached the level of Minimal Viable Deliverable in the sense that the first phase is completed: the current application communicates with AxonServer properly. Like [archetype-go-axon](https://github.com/dendrite2go/archetype-go-axon) it can do the following:
-1. ☑ Set up a session with AxonServer
-   * ☑ Enable React app to call a RPC endpoint on the example-command-api service through grpc-web
-2. ☑ Issue commands
-3. ☑ Register a command handler and handle commands
-4. ☑ Submit events
-   * ☑ Stream events to UI
-5. ☑ Retrieve the events for an aggregate and build a projection
-   * ☑ Validate commands against the projection
-6. ☑ Register a tracking event processor and handle events
-7. ☑ Store records in a query model: Elastic Search
-   * ☑ Store tracking token in Elastic Search
-8. ☑ Register a query handler and handle queries
-   * ☑ Show query results in UI
-
-Now it would be nice to:
-
-* Add macros to make the definition of handlers more ergonomic
-* Add in-memory caching of aggregate projections
-* Add support for storing snapshots of aggregate projections in AxonServer.
-* Add support for segmentation to distribute the load on tracking event processors.
-* Add support for sagas.
-* ...
