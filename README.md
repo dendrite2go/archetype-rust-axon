@@ -1,8 +1,8 @@
 # Archetype Rust Axon
 
 An archetypal Rust project that uses AxonServer for Event Sourcing and CQRS.
+This project uses the [dendrite crate](https://crates.io/crates/dendrite) ([rustic-dendrite git repo](https://github.com/dendrite2go/rustic-dendrite)) to connect to [AxonServer](https://axoniq.io/product-overview/axon-server).
 This project is a sibling of [archetype-go-axon](https://github.com/dendrite2go/archetype-go-axon), but for the Rust programming language.
-This project uses the [dendrite crate](https://crates.io/crates/dendrite) to connect to [AxonServer](https://axoniq.io/product-overview/axon-server).
 
 # Core concepts
 
