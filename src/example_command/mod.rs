@@ -97,7 +97,7 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
     let mut aggregate_registry = empty_aggregate_registry();
     aggregate_registry.handlers.insert(aggregate_definition.projection_name.clone(), Box::from(aggregate_definition));
 
-    command_worker(axon_connection, aggregate_registry).await.context("Error while handling commands")
+    command_worker(axon_connection, &mut aggregate_registry).await.context("Error while handling commands")
 }
 
 async fn handle_sourcing_event<T: ApplicableTo<P>,P: Clone>(event: Box<T>, projection: P) -> Result<Option<P>> {

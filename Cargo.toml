@@ -29,7 +29,7 @@ sha2 = "0.9.2"
 tokio = { version = "0.2", features = ["macros","time"] }
 tonic = "0.3.1"
 prost = "0.6"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "0.8.2", features = ["v4"] }
 
 [build-dependencies]
 tonic-build = "0.2"
