@@ -247,7 +247,9 @@ dependencies = [
 
 [[package]]
 name = "dendrite"
-version = "0.1.2"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54e3d4d4b2629131d6074dfc0bc70319703374ebecc3be7d7dccdbecf98512cd"
 dependencies = [
  "anyhow",
  "async-stream 0.3.0",
