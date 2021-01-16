@@ -10,7 +10,7 @@ source "${BIN}/verbose.sh"
 
 if [[ ".$1" = '.--help' ]]
 then
-    echo "Usage: $(basename "$0") [ -v [ -v ] ] [ --tee <file> ] [ --skip-build ] [ --dev ]" >&2
+    echo "Usage: $(basename "$0") [ -v [ -v ] ] [ --tee <file> ] [ --skip-build ] [ --build-uses-siblings ] [ --back-end-only ] [ -no-clobber ] [ --dev ]" >&2
     echo "       $(basename "$0") --help" >&2
     exit 0
 fi
@@ -28,9 +28,16 @@ then
   shift
 fi
 
+BUILD_VOLUME="${PROJECT}"
+if [[ ".$1" = '.--build-uses-siblings' ]]
+then
+  BUILD_VOLUME="$(dirname "${PROJECT}")"
+  shift
+fi
+
 DO_BUILD_BACK_END='true'
 DO_BUILD_PRESENT='true'
-DO_BUILD_SWAGGER_IMAGE='true'
+DO_BUILD_SWAGGER_IMAGE='false'
 if [[ ".$1" = '.--back-end-only' ]]
 then
   DO_BUILD_PRESENT='false'
@@ -42,6 +49,7 @@ DO_CLOBBER='true'
 if [[ ".$1" = '.--no-clobber' ]]
 then
   DO_CLOBBER='false'
+  shift
 fi
 
 : ${AXON_SERVER_PORT=8024}
@@ -106,8 +114,8 @@ function waitForDockerComposeReady() {
             ## DOCKER_FLAGS=(-e 'RUSTFLAGS=-Z macro-backtrace')
             time docker run --rm -v "cargo-home:/var/cargo-home" -e "CARGO_HOME=/var/cargo-home" \
                 "${DOCKER_FLAGS[@]}" \
-                -v "${PROJECT}:${PROJECT}" -w "${PROJECT}" "${DOCKER_REPOSITORY}/rust" \
-                cargo build
+                -v "${BUILD_VOLUME}:${BUILD_VOLUME}" -w "${PROJECT}" "${DOCKER_REPOSITORY}/rust" \
+                cargo build --target-dir 'target/linux'
         fi
 
         if "${DO_BUILD_PRESENT}"

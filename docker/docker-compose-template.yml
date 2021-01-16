@@ -29,7 +29,7 @@ services:
     image: rust:latest
     working_dir: ${PROJECT}/target
     command:
-      - "debug/dendrite_example"
+      - "linux/debug/dendrite_example"
     environment:
       - "RUST_LOG=info,dendrite=debug"
       - "RUST_BACKTRACE=1"
