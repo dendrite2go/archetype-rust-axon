@@ -94,6 +94,4 @@ volumes:
   axon-data:
   axon-eventdata:
   elastic-search-data:
-  ${NIX_STORE_VOLUME}:
-    external: true
 
