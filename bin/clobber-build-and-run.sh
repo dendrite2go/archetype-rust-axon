@@ -142,9 +142,12 @@ function waitForDockerComposeReady() {
     fi
 
     (
-        info "Stop pre-existing docker containers"
-        cd docker
-        docker-compose -p "${ENSEMBLE_NAME}" rm --stop --force || true
+        info "Remove pre-existing docker containers"
+        PRE_EXISTING="$(docker ps --filter "label=com.docker.compose.project=${ENSEMBLE_NAME}" -a --format '{{.ID}}')"
+        if [[ -n "${PRE_EXISTING}" ]]
+        then
+            docker rm -f ${PRE_EXISTING}
+        fi
     )
 
     if "${DO_CLOBBER}"
