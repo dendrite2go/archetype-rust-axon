@@ -30,6 +30,30 @@ Wait until everything is available (ElasticSearch is usually last). When everyth
 * [Microservices](https://en.wikipedia.org/wiki/Microservices)
 * [Service Mesh](https://buoyant.io/2017/04/25/whats-a-service-mesh-and-why-do-i-need-one/) (video: [talk by Jeroen Reijn](https://2019.jfall.nl/sessions/whats-a-service-mesh-and-why-do-i-need-one/))
 
+# Design
+
+Both the gRPC API that is exposed to the front-end and the payloads of the messages that are exchanged with AxonServer are defined using [Protocol Buffers](https://developers.google.com/protocol-buffers). This includes Commands, Command Projections, Command Results, Events, Queries, Query Results. (See [grpc_example.proto](https://github.com/dendrite2go/archetype-rust-axon/blob/master/proto/grpc_example.proto) for an example.)
+
+A CQRS application based on AxonServer consists of loosely coupled parts that can be easily separated into microservices and that can be independently and horizontally scaled at will. There are five types of parts:
+
+1. Command API
+2. Command Handler
+3. Event Handler
+4. Query API
+5. Query Handler
+
+To start with it is advisable to combine all these components in a single back-end application (a structured monolith). The example application is also structured like this. When the application grows, parts can be separated out into different microservices as needed.
+
+The responsibility of the Command API is to accept commands and submit them to AxonServer. Command API and Query API are often combined, but it is possible to define them as separate services in the proto definition and to create dedicated microservices for them. When the application grows, it also makes sense to split the API according to DDD Bounded Contexts.
+
+A Command Handler is what is called the Aggregate in AxonFramework. It defines how the application responds to commands. It maintains a command projection for each aggregate and verifies incoming commands against the latest state of that projection. If a command is accepted the handler can emit events that are stored in the Event Store of AxonServer. These events are also used to update the aggregate projection. Normally the success response of a command is empty, but sometimes, for example when a new aggregate is created, it is desirable to return some value, _e.g._, the ID of the new aggregate. Errors in the Command Handler are propagated to the caller. Normally an aggregate coincides with a DDD Bounded context. For large systems each aggregate type wil have its own microservice for the Command Handler. 
+
+An Event Processor applies incoming events to a Query Model. Query models are not persisted in AxonSever, but in a suitable storage facility that is optimized for a particular type of queries. A token that indicates the last processed event is stored with the query model. If a query model is deleted, it will be automatically rebuilt fom the events. Event handlers should not fail. If an event handler fails, the entire event processor for that query model stops and has to be restarted when the problem has been fixed. There can be many Query Models, and they can even depend on events from different aggregate types. Each query model can have its own microservice.
+
+The Query API accepts queries and submits them to AxonServer. The design considerations are very similar to the Command API. The query API can evolve much faster than the command API, because it follows User Experience demands, and it is much less constrained by business rules than the command API.
+
+A Query Processor executes queries on a particular (type of) query model(s). It is advisable to keep query processors as simple as possible. Try to shift as much processing to event processors so that it can be done beforehand instead of making the client wait for it.
+
 # Stack
 
 In alphabetic order:
