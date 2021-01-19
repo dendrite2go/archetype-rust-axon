@@ -6,15 +6,19 @@ This project is a sibling of [archetype-go-axon](https://github.com/dendrite2go/
 
 # Quick start
 
-Requirements Mac OS / X or Linux + docker.
+Requirements: Mac OS / X or Linux + docker.
 
 Run
 ```shell
 $ bin/clobber-build-and-run.sh
 ```
-Wait until everything is available (ElasticSearch is usually last).
-* [Front-end](http://localhost:3000)
-* [AxonServer](http://localhost:8024)
+The first time this takes very long, because all dependencies have to be downloaded and compiled, both for the back-end and for the front-end. Subsequent runs will be much faster.
+
+Wait until everything is available (ElasticSearch is usually last). When everything is up-and-running there are a few exposed ports that provide access to the various components of te example application:
+* HTTP [Front-end through proxy (port 3000)](http://localhost:3000)
+* HTTP [AxonServer (port 8024)](http://localhost:8024)
+* gRPC Back-end directly (port 8181)
+* REST ElasticSearch (port 9200)
 
 # Core concepts
 
@@ -60,4 +64,8 @@ The script `clobber-build-and-run.sh` takes the following arguments (options onl
 
 The file `etc/docker-compose.yml` is recreated from `etc/docker-compose-template.yml` by script `docker-compose-up.sh` for each run of `clobber-build-and-run.sh`.
 
-The `--dev` mode deploys a `node.js` container that serves the sources directly from the `present` directory. React will dynamically recompile and reload sources when they are changed. Otherwise, an `nginx` container is deployed that serves the 'production' generated front-end. 
+The `--dev` mode deploys a `node.js` container that serves the sources directly from the `present` directory. React will dynamically recompile and reload sources when they are changed. Otherwise, an `nginx` container is deployed that serves the 'production' generated front-end.
+
+There is a separate script `bin/docker-compose-up.sh` that only regenerates the `docker-compose.yml` and invokes docker compose up. It only takes options `-v1 (once or twice)` and `--dev`.
+
+There is also a basic script `grpcurl-call.sh` that provides access to the gRPC API of the back-end from the command-line.
