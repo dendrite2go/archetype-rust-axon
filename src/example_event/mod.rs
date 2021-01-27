@@ -110,3 +110,15 @@ impl AsyncApplicableTo<ExampleQueryModel> for GreetedEvent {
         Box::from(GreetedEvent::clone(self))
     }
 }
+
+impl ExampleQueryModel {
+    fn apply(self: &Self, event: GreetedEvent) -> Result<()> {
+        debug!("Apply: {:?}: {:?}", self.es_client, event.message);
+        Ok(())
+    }
+}
+
+#[dendrite_macros::event_handler]
+pub fn handle_greeted_event(item: GreetedEvent, context: ExampleQueryModel) -> Result<()> {
+    context.apply(item)
+}
