@@ -9,7 +9,7 @@ use elasticsearch::http::transport::Transport;
 use log::{debug,warn};
 use serde_json::Value;
 use std::time;
-use tokio::time::delay_for;
+use tokio::time::sleep;
 use elasticsearch::cluster::ClusterStatsParts;
 
 /// Polls ElasticSearch until it is available and ready.
@@ -22,7 +22,7 @@ pub async fn wait_for_elastic_search() -> Result<Elasticsearch> {
             },
             Ok(client) => return Ok(client),
         }
-        delay_for(interval).await;
+        sleep(interval).await;
     }
 }
 
@@ -56,6 +56,6 @@ async fn wait_for_status_ready(client: &Elasticsearch) -> Result<()> {
                 return Ok(());
             }
         }
-        delay_for(interval).await;
+        sleep(interval).await;
     }
 }

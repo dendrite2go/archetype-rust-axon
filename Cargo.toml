@@ -14,23 +14,23 @@ include = ["/src/**/*", "/proto/**/*", "/Cargo.*", "/build.rs", "/README.md", "/
 
 [dependencies]
 anyhow = "1.0"
-async-stream = "0.3.0"
+async-stream = "^0.3"
 base64 = "0.13.0"
-bytes = "0.5"
-dendrite = "0.1.3" # { path = "../rustic-dendrite" }
+bytes = "^1.0"
+dendrite = "0.2.0" # { path = "../rustic-dendrite" } #
 dendrite_macros = { path = "../rustic-dendrite-macros" }
-elasticsearch = "7.10.0-alpha.1"
+elasticsearch = "7.10.1-alpha.1"
 env_logger = "0.7.1"
-futures-core = "0.3.8"
-futures-util = "0.3.5"
-log = "0.4.11"
+futures-core = "^0.3"
+futures-util = "^0.3"
+log = "^0.4"
 serde = "~1"
 serde_json = "~1"
 sha2 = "0.9.2"
-tokio = { version = "0.2", features = ["macros","time"] }
-tonic = "0.3.1"
-prost = "0.6"
-uuid = { version = "0.8.2", features = ["v4"] }
+tokio = { version = "^1.0", features = ["macros","rt-multi-thread","time"] }
+tonic = "^0.4"
+prost = "^0.7"
+uuid = { version = "^0.8.2", features = ["v4"] }
 
 [build-dependencies]
-tonic-build = "0.2"
+tonic-build = "^0.4"

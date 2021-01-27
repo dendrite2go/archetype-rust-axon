@@ -1,8 +1,10 @@
 use anyhow::{Error,Result};
 use bytes::Bytes;
 use dendrite::axon_utils::{AxonServerHandle, CommandSink, QuerySink, init_command_sender, query_events};
+use futures_core::stream::Stream;
 use log::{debug};
 use prost::Message;
+use std::pin::Pin;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status};
 use crate::grpc_example::greeter_service_server::GreeterService;
@@ -80,11 +82,11 @@ impl GreeterService for GreeterServer {
         Ok(Response::new(reply))
     }
 
-    type GreetingsStream = mpsc::Receiver<Result<Greeting, Status>>;
+    type GreetingsStream = Pin<Box<dyn Stream<Item=Result<Greeting, Status>> + Send + Sync + 'static>>;
 
     async fn greetings(&self, _request: Request<Empty>) -> Result<Response<Self::GreetingsStream>, Status> {
         let events = query_events(&self.axon_server_handle, "xxx").await.map_err(to_status)?;
-        let (mut tx, rx) = mpsc::channel(4);
+        let (tx, mut rx) : (mpsc::Sender<Result<Greeting>>, mpsc::Receiver<Result<Greeting>>) = mpsc::channel(4);
 
         tokio::spawn(async move {
             for event in &events[..] {
@@ -106,13 +108,19 @@ impl GreeterService for GreeterServer {
             tx.send(Ok(greeting)).await.ok();
         });
 
-        Ok(Response::new(rx))
+        let output = async_stream::try_stream! {
+            while let Some(Ok(value)) = rx.recv().await {
+                yield value as Greeting;
+            }
+        };
+
+        Ok(Response::new(Box::pin(output) as Self::GreetingsStream))
     }
 
-    type SearchStream = mpsc::Receiver<Result<Greeting, Status>>;
+    type SearchStream = Pin<Box<dyn Stream<Item=Result<Greeting, Status>> + Send + Sync + 'static>>;
 
     async fn search(&self, request: Request<SearchQuery>) -> Result<Response<Self::SearchStream>, Status> {
-        let (mut tx, rx) = mpsc::channel(4);
+        let (tx, mut rx) : (mpsc::Sender<Result<Greeting>>, mpsc::Receiver<Result<Greeting>>) = mpsc::channel(4);
         let query = request.into_inner();
         let query_response = self.axon_server_handle.send_query("SearchQuery", Box::new(&query)).await.map_err(to_status)?;
 
@@ -130,7 +138,13 @@ impl GreeterService for GreeterServer {
             debug!("Done!")
         });
 
-        Ok(Response::new(rx))
+        let output = async_stream::try_stream! {
+            while let Some(Ok(value)) = rx.recv().await {
+                yield value as Greeting;
+            }
+        };
+
+        Ok(Response::new(Box::pin(output) as Self::SearchStream))
     }
 }
 
