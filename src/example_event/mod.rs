@@ -111,14 +111,18 @@ impl AsyncApplicableTo<ExampleQueryModel> for GreetedEvent {
     }
 }
 
-impl ExampleQueryModel {
+pub struct ExampleQuery {
+    name: String,
+}
+
+impl ExampleQuery {
     fn apply(self: &Self, event: GreetedEvent) -> Result<()> {
-        debug!("Apply: {:?}: {:?}", self.es_client, event.message);
+        debug!("Apply: {:?}: {:?}", self.name, event.message);
         Ok(())
     }
 }
 
 #[dendrite_macros::event_handler]
-pub fn handle_greeted_event(item: GreetedEvent, context: ExampleQueryModel) -> Result<()> {
+pub fn handle_greeted_event(item: GreetedEvent, context: ExampleQuery) -> Result<()> {
     context.apply(item)
 }
