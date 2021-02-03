@@ -10,6 +10,8 @@ class Greet extends Component {
         this.handleRefresh = this.handleRefresh.bind(this);
         this.handleRecord = this.handleRecord.bind(this);
         this.handleStop = this.handleStop.bind(this);
+        this.greetUrl = window.location.href.replace(/\/$/, ''); // 'http://' + window.location.hostname + ':3000'
+        console.log('Greet URL:', this.greetUrl);
         console.log('Example grpc-web stub:', example);
     }
 
@@ -37,7 +39,7 @@ class Greet extends Component {
         console.log('Submit: new request:', request);
         request.setMessage(message);
         console.log('Submit: request:', request);
-        const client = new example.GreeterServiceClient('http://localhost:3000');
+        const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Submit: client:', client);
         const response = client.greet(request);
         console.log('Submit: response:', response);
@@ -53,7 +55,7 @@ class Greet extends Component {
         const query = document.getElementById('message').value;
         console.log('Query: query:', query);
 
-        const client = new example.GreeterServiceClient('http://localhost:3000');
+        const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Query: client:', client);
 
         const container = document.getElementById('greetings');
@@ -88,7 +90,7 @@ class Greet extends Component {
     handleRefresh(event) {
         console.log('Handle refresh:', event)
 
-        const client = new example.GreeterServiceClient('http://localhost:3000');
+        const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Refresh: client:', client);
 
         const container = document.getElementById('greetings');
@@ -121,7 +123,7 @@ class Greet extends Component {
     handleRecord(event) {
         const request = new example.Empty();
         console.log('Record: new request:', request);
-        const client = new example.GreeterServiceClient('http://localhost:3000');
+        const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Record: client:', client);
         const response = client.record(request);
         console.log('Record: response:', response);
@@ -136,7 +138,7 @@ class Greet extends Component {
     handleStop(event) {
         const request = new example.Empty();
         console.log('Stop: new request:', request);
-        const client = new example.GreeterServiceClient('http://localhost:3000');
+        const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Stop: client:', client);
         const response = client.stop(request);
         console.log('Stop: response:', response);
