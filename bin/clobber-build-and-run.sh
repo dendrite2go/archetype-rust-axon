@@ -52,6 +52,13 @@ then
   shift
 fi
 
+DO_RUN='true'
+if [[ ".$1" = '.--no-run' ]]
+then
+  DO_RUN='false'
+  shift
+fi
+
 : ${AXON_SERVER_PORT=8024}
 : ${API_SERVER_PORT=8181}
 : ${ENSEMBLE_NAME=rustic}
@@ -159,5 +166,8 @@ function waitForDockerComposeReady() {
     fi
 )
 
-info "Start containers"
-exec docker/docker-compose-up.sh "${FLAGS_INHERIT[@]}" "$@"
+if "${DO_RUN}"
+then
+  info "Start containers"
+  exec docker/docker-compose-up.sh "${FLAGS_INHERIT[@]}" "$@"
+fi

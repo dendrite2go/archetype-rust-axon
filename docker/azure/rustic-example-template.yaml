@@ -1,0 +1,289 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axon-server
+spec:
+  selector:
+    matchLabels:
+      app: axon-server
+  template:
+    metadata:
+      labels:
+        app: axon-server
+    spec:
+      containers:
+        - name: axon-server
+          image: axoniq/axonserver:${AXON_VERSION}
+          ports:
+            - containerPort: 8024
+              name: axon-server-con
+            - containerPort: 8124
+              name: axon-server
+          volumeMounts:
+            - mountPath: /data
+              name: axon-data
+            - mountPath: /eventdata
+              name: axon-eventdata
+      volumes:
+        - name: axon-data
+        - name: axon-eventdata
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${ENSEMBLE_NAME}-present
+spec:
+  selector:
+    matchLabels:
+      app: ${ENSEMBLE_NAME}-present
+  template:
+    metadata:
+      labels:
+        app: ${ENSEMBLE_NAME}-present
+    spec:
+      containers:
+        - name: ${ENSEMBLE_NAME}-present
+          image: ${DOCKER_REPOSITORY}.azurecr.io/${ENSEMBLE_NAME}-present:${ENSEMBLE_IMAGE_VERSION}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: ${ENSEMBLE_NAME}-present
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy
+spec:
+  selector:
+    matchLabels:
+      app: proxy
+  template:
+    metadata:
+      labels:
+        app: proxy
+    spec:
+      containers:
+        - name: ${ENSEMBLE_NAME}-proxy
+          image: ${DOCKER_REPOSITORY}/${ENSEMBLE_NAME}-proxy:${ENSEMBLE_IMAGE_VERSION}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elastic-search
+spec:
+  selector:
+    matchLabels:
+      app: elastic-search
+  template:
+    metadata:
+      labels:
+        app: elastic-search
+    spec:
+      containers:
+        - name: elastic-search
+          image: elasticsearch:${ELASTIC_SEARCH_VERSION}
+          env:
+            - name: discovery.type
+              value: single-node
+          ports:
+            - containerPort: 9200
+              name: elastic-search
+          volumeMounts:
+            - mountPath: /usr/share/elasticsearch/data
+              name: elastic-data
+      volumes:
+        - name: elastic-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${ENSEMBLE_NAME}-api
+spec:
+  selector:
+    matchLabels:
+      app: ${ENSEMBLE_NAME}-api
+  template:
+    metadata:
+      labels:
+        app: ${ENSEMBLE_NAME}-api
+    spec:
+      containers:
+        - name: ${ENSEMBLE_NAME}-api
+          image: ${DOCKER_REPOSITORY}/${ENSEMBLE_NAME}-api:${ENSEMBLE_IMAGE_VERSION}
+          imagePullPolicy: Always
+          env:
+            - name: RUST_LOG
+              value: "info,dendrite=debug"
+            - name: RUST_BACKTRACE
+              value: "1"
+          ports:
+            - containerPort: 80
+              name: ${ENSEMBLE_NAME}-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxy
+spec:
+  type: LoadBalancer
+  ports:
+    - name: front-end
+      port: 80
+    - name: axon-server-api
+      port: 8124
+  selector:
+    app: proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${ENSEMBLE_NAME}-present
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 3000
+  selector:
+    app: ${ENSEMBLE_NAME}-present
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: axon-server-con
+spec:
+  type: NodePort
+  ports:
+    - port: 8024
+  selector:
+    app: axon-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: axon-server
+spec:
+  type: NodePort
+  ports:
+    - port: 8124
+  selector:
+    app: axon-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elastic-search
+spec:
+  type: NodePort
+  ports:
+    - port: 9200
+  selector:
+    app: elastic-search
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${ENSEMBLE_NAME}-command-api
+spec:
+  type: NodePort
+  ports:
+    - port: 8181
+  selector:
+    app: ${ENSEMBLE_NAME}-api
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: axon-data
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: azurefile-retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: axon-eventdata
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: azurefile-retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elastic-data
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: azurefile-retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-axon-data
+  labels:
+    type: local
+spec:
+  storageClassName: azurefile-retain
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/axon-data"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-axon-eventdata
+  labels:
+    type: local
+spec:
+  storageClassName: azurefile-retain
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/axon-eventdata"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-elastic-data
+  labels:
+    type: local
+spec:
+  storageClassName: azurefile-retain
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/elastic-data"
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: azurefile-retain
+provisioner: kubernetes.io/azure-file
+parameters:
+  skuName: Standard_LRS
+reclaimPolicy: Retain
+mountOptions:
+  - mfsymlinks
+  - actimeo=30
+allowVolumeExpansion: true
+volumeBindingMode: Immediate

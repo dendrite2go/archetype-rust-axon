@@ -67,6 +67,12 @@ case "$1" in
   ;;
 esac
 
+if [[ ".$1" = '.--port' ]]
+then
+  PORT="$2"
+  shift 2
+fi
+
 if [[ -n "$1" ]]
 then
   VALUE="$1"

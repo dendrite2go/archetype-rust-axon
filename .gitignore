@@ -1,5 +1,7 @@
 *-local.*
+/data/local/
 /docker/docker-compose.yml
+/docker/azure/rustic-example.yaml
 
 /present/src/grpc/
 /present/node_modules/
