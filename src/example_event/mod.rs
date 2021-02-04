@@ -65,7 +65,7 @@ async fn internal_process_events(axon_server_handle : AxonServerHandle) -> Resul
 
     let mut event_handler_registry: TheHandlerRegistry<ExampleQueryModel,Option<ExampleQueryModel>> = empty_handler_registry();
 
-    handle_greeted_event(&mut event_handler_registry)?;
+    event_handler_registry.register(&handle_greeted_event)?;
 
     event_processor(axon_server_handle, query_model, event_handler_registry).await.context("Error while handling commands")
 }
