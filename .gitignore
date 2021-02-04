@@ -1,4 +1,5 @@
 *-local.*
+/data/local/
 /docker/docker-compose.yml
 
 /present/src/grpc/
