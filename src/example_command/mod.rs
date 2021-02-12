@@ -28,11 +28,7 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
     let mut sourcing_handler_registry = empty_handler_registry();
     let mut command_handler_registry: TheHandlerRegistry<Arc<Mutex<AggregateContext<GreeterProjection>>>,SerializedObject> = empty_handler_registry();
 
-    sourcing_handler_registry.insert_with_output(
-        "GreetedEvent",
-        &GreetedEvent::decode,
-        &(|c, p| Box::pin(handle_sourcing_event(Box::from(c), p)))
-    )?;
+    sourcing_handler_registry.register(&handle_greeted_source_event)?;
 
     sourcing_handler_registry.insert_with_output(
         "StoppedRecordingEvent",
@@ -77,16 +73,9 @@ async fn handle_sourcing_event<T: ApplicableTo<P>,P: Clone>(event: Box<T>, proje
     Ok(Some(p))
 }
 
-impl ApplicableTo<GreeterProjection> for GreetedEvent {
-
-    fn apply_to(self: &Self, projection: &mut GreeterProjection) -> Result<()> {
-        debug!("Apply greeted event to GreeterProjection: {:?}", projection.is_recording);
-        Ok(())
-    }
-
-    fn box_clone(self: &Self) -> Box<dyn ApplicableTo<GreeterProjection>> {
-        Box::from(GreetedEvent::clone(self))
-    }
+#[dendrite_macros::event_sourcing_handler]
+fn handle_greeted_source_event(_event: GreetedEvent, projection: GreeterProjection) {
+    debug!("Apply greeted event to GreeterProjection: {:?}", projection.is_recording);
 }
 
 impl ApplicableTo<GreeterProjection> for StartedRecordingEvent {
