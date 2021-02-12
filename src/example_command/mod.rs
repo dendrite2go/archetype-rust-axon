@@ -28,25 +28,13 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
     let mut sourcing_handler_registry = empty_handler_registry();
     let mut command_handler_registry: TheHandlerRegistry<Arc<Mutex<AggregateContext<GreeterProjection>>>,SerializedObject> = empty_handler_registry();
 
-    sourcing_handler_registry.register(&handle_greeted_source_event)?;
-
-    sourcing_handler_registry.insert_with_output(
-        "StoppedRecordingEvent",
-        &StoppedRecordingEvent::decode,
-        &(|c, p| Box::pin(handle_sourcing_event(Box::from(c), p)))
-    )?;
-
-    sourcing_handler_registry.insert_with_output(
-        "StartedRecordingEvent",
-        &StartedRecordingEvent::decode,
-        &(|c, p| Box::pin(handle_sourcing_event(Box::from(c), p)))
-    )?;
-
     command_handler_registry.register(&handle_greet_command)?;
-
     command_handler_registry.register(&handle_record_command)?;
-
     command_handler_registry.register(&handle_stop_command)?;
+
+    sourcing_handler_registry.register(&handle_greeted_source_event)?;
+    sourcing_handler_registry.register(&handle_started_recording_source_event)?;
+    sourcing_handler_registry.register(&handle_stopped_recording_source_event)?;
 
     let aggregate_definition: AggregateDefinition<GreeterProjection> = create_aggregate_definition(
         "GreeterProjection".to_string(),
@@ -65,43 +53,6 @@ fn empty_projection() -> GreeterProjection {
     let mut projection = GreeterProjection::default();
     projection.is_recording = true;
     projection
-}
-
-async fn handle_sourcing_event<T: ApplicableTo<P>,P: Clone>(event: Box<T>, projection: P) -> Result<Option<P>> {
-    let mut p = projection.clone();
-    event.apply_to(&mut p)?;
-    Ok(Some(p))
-}
-
-#[dendrite_macros::event_sourcing_handler]
-fn handle_greeted_source_event(_event: GreetedEvent, projection: GreeterProjection) {
-    debug!("Apply greeted event to GreeterProjection: {:?}", projection.is_recording);
-}
-
-impl ApplicableTo<GreeterProjection> for StartedRecordingEvent {
-
-    fn apply_to(self: &Self, projection: &mut GreeterProjection) -> Result<()> {
-        debug!("Apply StartedRecordingEvent to GreeterProjection: {:?}", projection.is_recording);
-        projection.is_recording = true;
-        Ok(())
-    }
-
-    fn box_clone(self: &Self) -> Box<dyn ApplicableTo<GreeterProjection>> {
-        Box::from(StartedRecordingEvent::clone(self))
-    }
-}
-
-impl ApplicableTo<GreeterProjection> for StoppedRecordingEvent {
-
-    fn apply_to(self: &Self, projection: &mut GreeterProjection) -> Result<()> {
-        debug!("Apply StoppedRecordingEvent to GreeterProjection: {:?}", projection.is_recording);
-        projection.is_recording = false;
-        Ok(())
-    }
-
-    fn box_clone(self: &Self) -> Box<dyn ApplicableTo<GreeterProjection>> {
-        Box::from(StoppedRecordingEvent::clone(self))
-    }
 }
 
 #[dendrite_macros::command_handler]
@@ -151,4 +102,21 @@ async fn handle_stop_command(command: StopCommand, aggregate_context: &mut Aggre
     }
     aggregate_context.emit("StoppedRecordingEvent", Box::from(StoppedRecordingEvent {}))?;
     Ok(Some(Empty::default()))
+}
+
+#[dendrite_macros::event_sourcing_handler]
+fn handle_greeted_source_event(_event: GreetedEvent, projection: GreeterProjection) {
+    debug!("Apply greeted event to GreeterProjection: {:?}", projection.is_recording);
+}
+
+#[dendrite_macros::event_sourcing_handler]
+fn handle_started_recording_source_event(_event: StartedRecordingEvent, projection: GreeterProjection) {
+    debug!("Apply StartedRecordingEvent to GreeterProjection: {:?}", projection.is_recording);
+    projection.is_recording = true;
+}
+
+#[dendrite_macros::event_sourcing_handler]
+fn handle_stopped_recording_source_event(_event: StoppedRecordingEvent, projection: GreeterProjection) {
+    debug!("Apply StoppedRecordingEvent to GreeterProjection: {:?}", projection.is_recording);
+    projection.is_recording = false;
 }
