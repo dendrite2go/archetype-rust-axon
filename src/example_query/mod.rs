@@ -33,17 +33,14 @@ async fn internal_process_queries(axon_server_handle : AxonServerHandle) -> Resu
 
     let mut query_handler_registry: TheHandlerRegistry<ExampleQueryContext,QueryResult> = empty_handler_registry();
 
-    query_handler_registry.insert_with_output(
-        "SearchQuery",
-        &SearchQuery::decode,
-        &(|c, p| Box::pin(handle_search_query(c, p)))
-    )?;
+    query_handler_registry.register(&handle_search_query)?;
 
     query_processor(axon_server_handle, query_context, query_handler_registry).await.context("Error while handling queries")
 }
 
-async fn handle_search_query(search_query: SearchQuery, projection: ExampleQueryContext) -> Result<Option<QueryResult>> {
-    let search_response = projection.es_client
+#[dendrite_macros::query_handler]
+async fn handle_search_query(search_query: SearchQuery, query_model: ExampleQueryContext) -> Result<Option<QueryResult>> {
+    let search_response = query_model.es_client
         .search(SearchParts::Index(&["greetings"]))
         .q(&search_query.query)
         ._source(&["value"])
