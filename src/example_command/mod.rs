@@ -1,6 +1,6 @@
 use anyhow::{Context,Result,anyhow};
 use async_lock::Mutex;
-use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, ApplicableTo, AxonConnection, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, command_worker, axon_serialize, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry, AggregateDefinition};
+use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonConnection, AxonServerHandle, SerializedObject, TheHandlerRegistry, command_worker, axon_serialize, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry};
 use log::{debug,error};
 use prost::{Message};
 use std::sync::Arc;
@@ -46,11 +46,7 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
         &(|c, p| Box::pin(handle_sourcing_event(Box::from(c), p)))
     )?;
 
-    command_handler_registry.insert_with_output(
-        "GreetCommand",
-        &GreetCommand::decode,
-        &(|c, p| Box::pin(handle_greet_command(c, p)))
-    )?;
+    command_handler_registry.register(&handle_greet_command)?;
 
     command_handler_registry.insert_with_output(
         "RecordCommand",
@@ -127,14 +123,13 @@ impl ApplicableTo<GreeterProjection> for StoppedRecordingEvent {
     }
 }
 
-async fn handle_greet_command(command: GreetCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
+#[dendrite_macros::command_handler]
+async fn handle_greet_command(command: GreetCommand, aggregate_context: &mut AggregateContext<GreeterProjection>) -> Result<Option<Acknowledgement>> {
     let greeting = command.message;
     let message = greeting.clone().map(|g| g.message).unwrap_or("-/-".to_string());
     if message == "ERROR" {
         return Err(anyhow!("Panicked at reading 'ERROR'"));
     }
-
-    let mut aggregate_context = aggregate_context_ref.deref().lock().await;
 
     let projection = aggregate_context.get_projection("xxx").await?;
     if !projection.is_recording {
@@ -148,9 +143,9 @@ async fn handle_greet_command(command: GreetCommand, aggregate_context_ref: Arc<
             message: greeting,
         }))?;
 
-    Ok(Some(axon_serialize("", &Acknowledgement {
+    Ok(Some(Acknowledgement {
         message: format!("ACK! {}", message),
-    })?))
+    }))
 }
 
 async fn handle_record_command(command: RecordCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
