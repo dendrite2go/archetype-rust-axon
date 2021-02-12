@@ -1,8 +1,11 @@
 use anyhow::{Context,Result,anyhow};
-use dendrite::axon_utils::{ApplicableTo, AxonConnection, AxonServerHandle, EmitApplicableEventsAndResponse, HandlerRegistry, command_worker, create_aggregate_definition, emit, emit_events_and_response, empty_handler_registry, empty_aggregate_registry};
+use async_lock::Mutex;
+use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, ApplicableTo, AxonConnection, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, command_worker, axon_serialize, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry, AggregateDefinition};
 use log::{debug,error};
 use prost::{Message};
-use crate::grpc_example::{Acknowledgement,GreetCommand,GreetedEvent,GreeterProjection,RecordCommand,StartedRecordingEvent,StopCommand,StoppedRecordingEvent};
+use std::sync::Arc;
+use std::ops::Deref;
+use crate::grpc_example::{Acknowledgement,Empty,GreetCommand,GreetedEvent,GreeterProjection,RecordCommand,StartedRecordingEvent,StopCommand,StoppedRecordingEvent};
 
 /// Handles commands for the example application.
 ///
@@ -22,9 +25,8 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
     };
     debug!("Axon connection: {:?}", axon_connection);
 
-    let mut aggregate_id_extractor_registry = empty_handler_registry();
     let mut sourcing_handler_registry = empty_handler_registry();
-    let mut command_handler_registry = empty_handler_registry();
+    let mut command_handler_registry: TheHandlerRegistry<Arc<Mutex<AggregateContext<GreeterProjection>>>,SerializedObject> = empty_handler_registry();
 
     sourcing_handler_registry.insert_with_output(
         "GreetedEvent",
@@ -44,22 +46,10 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
         &(|c, p| Box::pin(handle_sourcing_event(Box::from(c), p)))
     )?;
 
-    aggregate_id_extractor_registry.insert_with_output(
-        "GreetCommand",
-        &GreetCommand::decode,
-        &(|_, _| Box::pin(fixed_aggregate_id()))
-    )?;
-
     command_handler_registry.insert_with_output(
         "GreetCommand",
         &GreetCommand::decode,
         &(|c, p| Box::pin(handle_greet_command(c, p)))
-    )?;
-
-    aggregate_id_extractor_registry.insert_with_output(
-        "RecordCommand",
-        &RecordCommand::decode,
-        &(|_, _| Box::pin(fixed_aggregate_id()))
     )?;
 
     command_handler_registry.insert_with_output(
@@ -68,46 +58,35 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
         &(|c, p| Box::pin(handle_record_command(c, p)))
     )?;
 
-    aggregate_id_extractor_registry.insert_with_output(
-        "StopCommand",
-        &StopCommand::decode,
-        &(|_, _| Box::pin(fixed_aggregate_id()))
-    )?;
-
     command_handler_registry.insert_with_output(
         "StopCommand",
         &StopCommand::decode,
         &(|c, p| Box::pin(handle_stop_command(c, p)))
     )?;
 
-    let empty_projection = Box::new(|| {
-        let mut projection = GreeterProjection::default();
-        projection.is_recording = true;
-        projection
-    });
-
-    let aggregate_definition = create_aggregate_definition(
+    let aggregate_definition: AggregateDefinition<GreeterProjection> = create_aggregate_definition(
         "GreeterProjection".to_string(),
-        empty_projection,
-        aggregate_id_extractor_registry,
+        Box::from(empty_projection as fn() -> GreeterProjection),
         command_handler_registry,
         sourcing_handler_registry
     );
 
     let mut aggregate_registry = empty_aggregate_registry();
-    aggregate_registry.handlers.insert(aggregate_definition.projection_name.clone(), Box::from(aggregate_definition));
+    aggregate_registry.handlers.insert(aggregate_definition.projection_name.clone(), Arc::new(Arc::new(aggregate_definition)));
 
     command_worker(axon_connection, &mut aggregate_registry).await.context("Error while handling commands")
+}
+
+fn empty_projection() -> GreeterProjection {
+    let mut projection = GreeterProjection::default();
+    projection.is_recording = true;
+    projection
 }
 
 async fn handle_sourcing_event<T: ApplicableTo<P>,P: Clone>(event: Box<T>, projection: P) -> Result<Option<P>> {
     let mut p = projection.clone();
     event.apply_to(&mut p)?;
     Ok(Some(p))
-}
-
-async fn fixed_aggregate_id() -> Result<Option<String>> {
-    Ok(Some("xxx".to_string()))
 }
 
 impl ApplicableTo<GreeterProjection> for GreetedEvent {
@@ -148,44 +127,52 @@ impl ApplicableTo<GreeterProjection> for StoppedRecordingEvent {
     }
 }
 
-async fn handle_greet_command (command: GreetCommand, projection: GreeterProjection) -> Result<Option<EmitApplicableEventsAndResponse<GreeterProjection>>> {
-    debug!("Greet command handler: {:?}", command);
-    if !projection.is_recording {
-        debug!("Not recording, so no events emitted nor acknowledgement returned");
-        return Ok(None);
-    }
-    debug!("Recording, so proceed");
+async fn handle_greet_command(command: GreetCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
     let greeting = command.message;
     let message = greeting.clone().map(|g| g.message).unwrap_or("-/-".to_string());
     if message == "ERROR" {
         return Err(anyhow!("Panicked at reading 'ERROR'"));
     }
-    let mut emit_events = emit_events_and_response("Acknowledgement", &Acknowledgement {
+
+    let mut aggregate_context = aggregate_context_ref.deref().lock().await;
+
+    let projection = aggregate_context.get_projection("xxx").await?;
+    if !projection.is_recording {
+        debug!("Not recording, so no events emitted nor acknowledgement returned");
+        return Ok(None);
+    }
+    debug!("Recording, so proceed");
+
+    aggregate_context
+        .emit("GreetedEvent", Box::from(GreetedEvent {
+            message: greeting,
+        }))?;
+
+    Ok(Some(axon_serialize("", &Acknowledgement {
         message: format!("ACK! {}", message),
-    })?;
-    emit(&mut emit_events, "GreetedEvent", Box::from(GreetedEvent {
-        message: greeting,
-    }))?;
-    debug!("Emit events and response: {:?}", emit_events);
-    Ok(Some(emit_events))
+    })?))
 }
 
-async fn handle_record_command (command: RecordCommand, projection: GreeterProjection) -> Result<Option<EmitApplicableEventsAndResponse<GreeterProjection>>> {
+async fn handle_record_command(command: RecordCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
+    let mut aggregate_context = aggregate_context_ref.deref().lock().await;
+    let projection = aggregate_context.get_projection("xxx").await?;
     debug!("Record command handler: {:?}", command);
     if projection.is_recording {
+        debug!("Unnecessary RecordCommand");
         return Ok(None)
     }
-    let mut emit_events = emit_events_and_response("Empty", &())?;
-    emit(&mut emit_events, "StartedRecordingEvent", Box::from(StartedRecordingEvent {}))?;
-    Ok(Some(emit_events))
+    aggregate_context.emit("StartedRecordingEvent", Box::from(StartedRecordingEvent {}))?;
+    Ok(Some(axon_serialize("Empty", &Empty::default())?))
 }
 
-async fn handle_stop_command (command: StopCommand, projection: GreeterProjection) -> Result<Option<EmitApplicableEventsAndResponse<GreeterProjection>>> {
+async fn handle_stop_command(command: StopCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
+    let mut aggregate_context = aggregate_context_ref.deref().lock().await;
+    let projection = aggregate_context.get_projection("xxx").await?;
     debug!("Stop command handler: {:?}", command);
     if !projection.is_recording {
+        debug!("Unnecessary StopCommand");
         return Ok(None)
     }
-    let mut emit_events = emit_events_and_response("Empty", &())?;
-    emit(&mut emit_events, "StoppedRecordingEvent", Box::from(StoppedRecordingEvent {}))?;
-    Ok(Some(emit_events))
+    aggregate_context.emit("StoppedRecordingEvent", Box::from(StoppedRecordingEvent {}))?;
+    Ok(Some(axon_serialize("Empty", &Empty::default())?))
 }

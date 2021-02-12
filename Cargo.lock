@@ -41,6 +41,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-lock"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1996609732bde4a9988bc42125f55f2af5f3c36370e27c778d5191a4a1b63bfb"
+dependencies = [
+ "event-listener",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -217,6 +226,7 @@ name = "dendrite"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "async-lock",
  "async-stream",
  "bytes",
  "futures-core",
@@ -235,6 +245,7 @@ name = "dendrite_example"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-lock",
  "async-stream",
  "base64 0.13.0",
  "bytes",
@@ -326,6 +337,12 @@ dependencies = [
  "regex",
  "termcolor",
 ]
+
+[[package]]
+name = "event-listener"
+version = "2.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7531096570974c3a9dcf9e4b8e1cede1ec26cf5046219fb3b9d897503b9be59"
 
 [[package]]
 name = "fixedbitset"
