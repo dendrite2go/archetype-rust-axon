@@ -1,6 +1,6 @@
 use anyhow::{Context,Result,anyhow};
 use async_lock::Mutex;
-use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonConnection, AxonServerHandle, SerializedObject, TheHandlerRegistry, command_worker, axon_serialize, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry};
+use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonConnection, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, command_worker, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry};
 use log::{debug,error};
 use prost::{Message};
 use std::sync::Arc;
@@ -48,17 +48,9 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
 
     command_handler_registry.register(&handle_greet_command)?;
 
-    command_handler_registry.insert_with_output(
-        "RecordCommand",
-        &RecordCommand::decode,
-        &(|c, p| Box::pin(handle_record_command(c, p)))
-    )?;
+    command_handler_registry.register(&handle_record_command)?;
 
-    command_handler_registry.insert_with_output(
-        "StopCommand",
-        &StopCommand::decode,
-        &(|c, p| Box::pin(handle_stop_command(c, p)))
-    )?;
+    command_handler_registry.register(&handle_stop_command)?;
 
     let aggregate_definition: AggregateDefinition<GreeterProjection> = create_aggregate_definition(
         "GreeterProjection".to_string(),
@@ -148,8 +140,8 @@ async fn handle_greet_command(command: GreetCommand, aggregate_context: &mut Agg
     }))
 }
 
-async fn handle_record_command(command: RecordCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
-    let mut aggregate_context = aggregate_context_ref.deref().lock().await;
+#[dendrite_macros::command_handler]
+async fn handle_record_command(command: RecordCommand, aggregate_context: &mut AggregateContext<GreeterProjection>) -> Result<Option<Empty>> {
     let projection = aggregate_context.get_projection("xxx").await?;
     debug!("Record command handler: {:?}", command);
     if projection.is_recording {
@@ -157,11 +149,11 @@ async fn handle_record_command(command: RecordCommand, aggregate_context_ref: Ar
         return Ok(None)
     }
     aggregate_context.emit("StartedRecordingEvent", Box::from(StartedRecordingEvent {}))?;
-    Ok(Some(axon_serialize("Empty", &Empty::default())?))
+    Ok(Some(Empty::default()))
 }
 
-async fn handle_stop_command(command: StopCommand, aggregate_context_ref: Arc<Mutex<AggregateContext<GreeterProjection>>>) -> Result<Option<SerializedObject>> {
-    let mut aggregate_context = aggregate_context_ref.deref().lock().await;
+#[dendrite_macros::command_handler]
+async fn handle_stop_command(command: StopCommand, aggregate_context: &mut AggregateContext<GreeterProjection>) -> Result<Option<Empty>> {
     let projection = aggregate_context.get_projection("xxx").await?;
     debug!("Stop command handler: {:?}", command);
     if !projection.is_recording {
@@ -169,5 +161,5 @@ async fn handle_stop_command(command: StopCommand, aggregate_context_ref: Arc<Mu
         return Ok(None)
     }
     aggregate_context.emit("StoppedRecordingEvent", Box::from(StoppedRecordingEvent {}))?;
-    Ok(Some(axon_serialize("Empty", &Empty::default())?))
+    Ok(Some(Empty::default()))
 }
