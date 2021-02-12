@@ -160,4 +160,4 @@ function waitForDockerComposeReady() {
 )
 
 info "Start containers"
-exec docker/docker-compose-up.sh "${FLAGS_INHERIT[@]}" "$@"
+exec "${PROJECT}/docker/docker-compose-up.sh" "${FLAGS_INHERIT[@]}" "$@"
