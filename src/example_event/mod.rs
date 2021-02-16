@@ -1,4 +1,4 @@
-use anyhow::{anyhow,Context,Result};
+use anyhow::{Context,Result};
 use dendrite::axon_utils::{AsyncApplicableTo, AxonServerHandle, TheHandlerRegistry, TokenStore, event_processor, empty_handler_registry};
 use elasticsearch::{Elasticsearch, IndexParts, GetParts};
 use log::{debug,error};
@@ -16,11 +16,12 @@ struct ExampleQueryModel {
 #[tonic::async_trait]
 impl TokenStore for ExampleQueryModel {
     async fn store_token(&self, token: i64) {
+        let hex_token = format!("{:x}", token);
         let result = self.es_client
             .index(IndexParts::IndexId("tracking-token", "greeting"))
             .body(json!({
                     "id": "greeting",
-                    "token": token,
+                    "token": hex_token,
                 }))
             .send()
             .await
@@ -37,9 +38,10 @@ impl TokenStore for ExampleQueryModel {
         ;
         let value = response.json::<Value>().await?;
         debug!("Retrieved response value: {:?}", value);
-        if let Value::Number(token) = &value["_source"]["token"] {
+        if let Value::String(hex_token) = &value["_source"]["token"] {
+            let token = i64::from_str_radix(hex_token, 16)?;
             debug!("Retrieved token: {:?}", token);
-            return token.as_i64().ok_or(anyhow!("Token is not an i64"));
+            return Ok(token);
         }
         Ok(-1)
     }

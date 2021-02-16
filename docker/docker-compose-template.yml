@@ -57,6 +57,22 @@ services:
     depends_on:
       - axon-server
     #${PRESENT_VOLUMES}
+  config-manager:
+    image: ${DOCKER_REPOSITORY}/config-manager:0.0.1-SNAPSHOT
+    working_dir: /opt
+    command:
+      - "./example"
+    init: true
+    networks:
+      - ${ENSEMBLE_NAME}
+    expose:
+      - "8181"
+    depends_on:
+      - axon-server
+    volumes:
+      - type: volume
+        source: ${NIX_STORE_VOLUME}
+        target: /nix/store
   proxy:
     image: ${DOCKER_REPOSITORY}/${ENSEMBLE_NAME}-proxy:${ENSEMBLE_IMAGE_VERSION}
     networks:
@@ -94,4 +110,5 @@ volumes:
   axon-data:
   axon-eventdata:
   elastic-search-data:
-
+  ${NIX_STORE_VOLUME}:
+    external: true
