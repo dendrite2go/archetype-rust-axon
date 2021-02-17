@@ -41,7 +41,7 @@ class Greet extends Component {
         console.log('Submit: request:', request);
         const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Submit: client:', client);
-        const response = client.greet(request);
+        const response = client.greet(request, {"authorization": "my-jwt-token"});
         console.log('Submit: response:', response);
         response.on('data', function(r) {console.log('Greet event:', r);})
         response.on('status', function(status) {
