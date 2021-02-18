@@ -13,7 +13,7 @@ then
 fi
 
 VARIABLE='message'
-VALUE='Tonic'
+VALUE='{}'
 case "$1" in
 --greet)
   PROTO="grpc_example.proto"
@@ -62,6 +62,13 @@ case "$1" in
   VARIABLE='name'
   shift
   ;;
+--authorize)
+  PROTO="config.proto"
+  PORT='3000'
+  URL='org.leialearns.grpc.example.GreeterService/Authorize'
+  VARIABLE=''
+  shift
+  ;;
 *)
   exit 1
   ;;
@@ -75,7 +82,7 @@ fi
 
 if [[ -z "${VARIABLE}" ]]
 then
-  PAYLOAD='{}'
+  PAYLOAD="${VALUE}"
 else
   PAYLOAD="$(echo "{'${VARIABLE}':'${VALUE}'}" | tr \'\" \"\')"
 fi

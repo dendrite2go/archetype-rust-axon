@@ -80,6 +80,8 @@ services:
     ports:
       - target: 80
         published: ${UI_SERVER_PORT}
+      - target: 8118
+        published: 8118
     depends_on:
       - axon-server
 #  grpc-swagger:

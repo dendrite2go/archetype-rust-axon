@@ -45,6 +45,12 @@ static_resources:
                             host_rewrite: rustic-command-api
                             cluster: service_core
                         - match:
+                            prefix: "/org.leialearns.grpc.example"
+                            grpc: {}
+                          route:
+                            host_rewrite: config-manager
+                            cluster: service_config
+                        - match:
                             prefix: "/"
                           route:
                             host_rewrite: rustic-present
@@ -79,6 +85,35 @@ static_resources:
                           route:
                             host_rewrite: axon-server
                             cluster: service_axon
+                http_filters:
+                  - name: envoy.grpc_web
+                  - name: envoy.router
+    - name: listener_config
+      address:
+        socket_address:
+          protocol: TCP
+          address: 0.0.0.0
+          port_value: 8118
+      filter_chains:
+        - filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                stat_prefix: ingress_config_http
+                stream_idle_timeout:
+                  seconds: 0
+                  nanos: 0
+                route_config:
+                  name: local_config_route
+                  virtual_hosts:
+                    - name: local_config_service
+                      domains: ["*"]
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            host_rewrite: config-server
+                            cluster: service_config
                 http_filters:
                   - name: envoy.grpc_web
                   - name: envoy.router
@@ -126,6 +161,21 @@ static_resources:
                   address:
                     socket_address:
                       address: rustic-command-api
+                      port_value: 8181
+    - name: service_config
+      connect_timeout: 0.25s
+      lb_policy: ROUND_ROBIN
+      type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: service_config
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: config-manager
                       port_value: 8181
 
 admin:
