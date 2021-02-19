@@ -14,6 +14,8 @@ then
   SIGN_PRIVATE_KEY="${ROOT_PRIVATE_KEY}"
 fi
 
+AUTHORITY="$1" ; shift
+
 (
   cd "${PROJECT}" || exit 1
   log "DIR=[$(pwd)]"
@@ -52,5 +54,5 @@ fi
     fi
 
     echo '>>> End'
-  ) | docker run --rm -i dendrite2go/configmanager 'host.docker.internal:8118'
+  ) | docker run --rm -i dendrite2go/configmanager "${AUTHORITY:-host.docker.internal:3000}"
 )

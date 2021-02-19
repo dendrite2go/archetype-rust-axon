@@ -10,18 +10,18 @@ cd "${PROJECT}/proto"
 
 if [ \! -f 'grpc_example.proto' ]
 then
-  error "Protocol buffer specification files for Example not found in current directory"
+  error "Protocol buffer specification files for back-end API not found in: $(pwd)"
 fi
 
 log "Generating JS stubs from $(pwd)"
 
-OUT_DIR="${MODULE}/src/grpc/example"
+OUT_DIR="${MODULE}/src/grpc/backend"
 mkdir -p "${OUT_DIR}"
 
 protoc --js_out="import_style=commonjs:${OUT_DIR}" --grpc-web_out="import_style=commonjs+dts,mode=grpcwebtext:${OUT_DIR}" -I. *.proto
 
 # Add /* eslint-disable */
-cd "${MODULE}/src/grpc/example"
+cd "${MODULE}/src/grpc/backend"
 sed -E -i \
   -e '1s:^/\* eslint-disable \*/$:/*@@@ eslint-disable @@@*/:' \
   -e "1i\\

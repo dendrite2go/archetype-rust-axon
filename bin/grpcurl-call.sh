@@ -63,9 +63,9 @@ case "$1" in
   shift
   ;;
 --authorize)
-  PROTO="config.proto"
+  PROTO="dendrite_config.proto"
   PORT='3000'
-  URL='org.leialearns.grpc.example.GreeterService/Authorize'
+  URL='dendrite_config.ConfigurationService/Authorize'
   VARIABLE=''
   shift
   ;;

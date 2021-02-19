@@ -1,11 +1,11 @@
 syntax = "proto3";
-package org.leialearns.grpc.example;
-option go_package = "src/pkg/grpc/example";
+package dendrite_config;
+option go_package = "src/pkg/grpc/dendrite_config";
 
 // API
 
-/* The GreeterService defines the gRPC requests for greeting AxonServer. */
-service GreeterService {
+/* The ConfigurationService defines the gRPC requests for configuring Dendrite applications. */
+service ConfigurationService {
     rpc ListTrustedKeys (Empty) returns (stream PublicKey) {}
     rpc ChangeTrustedKeys (stream TrustedKeyRequest) returns (stream TrustedKeyResponse) {}
     rpc SetPrivateKey(PrivateKey) returns (Empty) {}
@@ -63,8 +63,6 @@ message CredentialsRemovedEvent {
 message PropertyChangedEvent {
     KeyValue property = 1;
 }
-
-// Queries
 
 // Access management
 

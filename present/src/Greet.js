@@ -1,24 +1,32 @@
 import React, { Component } from 'react';
-import example from './grpc/example/grpc_example_grpc_web_pb';
+import example from './grpc/backend/grpc_example_grpc_web_pb';
+import dendrite_config from './grpc/backend/dendrite_config_grpc_web_pb';
 // import example_message from './grpc/example/grpc_example_pb';
 
 class Greet extends Component {
     constructor(props) {
         super(props);
+        this.login = this.login.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleQuery = this.handleQuery.bind(this);
         this.handleRefresh = this.handleRefresh.bind(this);
         this.handleRecord = this.handleRecord.bind(this);
         this.handleStop = this.handleStop.bind(this);
         this.greetUrl = window.location.href.replace(/\/$/, ''); // 'http://' + window.location.hostname + ':3000'
+        this.configUrl = this.greetUrl.replace(/(:[0-9]*)?$/, ':8118');
         console.log('Greet URL:', this.greetUrl);
         console.log('Example grpc-web stub:', example);
+        console.log('Config grpc-web stub:', dendrite_config);
     }
 
     render() {
         return (
             <div>
                 <h3>Greetings</h3>
+                <p><input type='text' id='user-name'/>
+                   <input type='password' id='password' className='trailing'/>
+                   <input type='submit' id='login' value=' Login ' onClick={this.login} className='trailing'/>
+                </p>
                 <p><input type='submit' id='record' value=' Record ' onClick={this.handleRecord}/>
                    <input type='submit' id='stop' value=' Stop ' onClick={this.handleStop} className='trailing'/>
                 </p>
@@ -30,6 +38,32 @@ class Greet extends Component {
                 <div id='greetings'><div><i>greetings appear here</i></div></div>
             </div>
         );
+    }
+
+    login(event) {
+        console.log('Login');
+        const userName = document.getElementById('user-name').value;
+        const password = document.getElementById('password').value;
+        if (userName && password) {
+            console.log('Login: credentials', userName, password.replaceAll(/./g, "*"));
+        } else {
+            console.log('Login: missing credentials');
+            return;
+        }
+        const request = new dendrite_config.Credentials();
+        request.setIdentifier(userName);
+        request.setSecret(password);
+        console.log("Login: request:", request);
+        const client = new dendrite_config.ConfigurationServiceClient(this.greetUrl);
+        console.log("Login: client:", client);
+        const response = client.authorize(request);
+        console.log('Login: response:', response, response.on);
+        response.on('error', function(e) {
+            console.log('Login: authorization error:', e);
+        });
+        response.on('data', function(r) {
+            console.log('Login: authorization response:', r);
+        });
     }
 
     handleSubmit(event) {
