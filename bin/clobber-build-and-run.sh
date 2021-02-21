@@ -159,5 +159,8 @@ function waitForDockerComposeReady() {
     fi
 )
 
+info "Prepare configuration data"
+"${BIN}/config-prepare.sh"
+
 info "Start containers"
 exec "${PROJECT}/docker/docker-compose-up.sh" "${FLAGS_INHERIT[@]}" "$@"

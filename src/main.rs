@@ -3,6 +3,7 @@ use log::{debug,info};
 
 use tonic::transport::Server;
 
+use dendrite::axon_utils::platform_worker;
 use dendrite_example::example_api::init;
 use dendrite_example::example_command::handle_commands;
 use dendrite_example::example_event::process_events;
@@ -16,6 +17,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Dendrite Example API service started");
 
     let greeter_server = init().await.unwrap();
+
+    tokio::spawn(platform_worker(greeter_server.axon_server_handle.clone(), "Rustic"));
 
     tokio::spawn(handle_commands(greeter_server.axon_server_handle.clone()));
 

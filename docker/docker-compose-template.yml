@@ -107,6 +107,26 @@ services:
       - type: volume
         source: elastic-search-data
         target: /usr/share/elasticsearch/data
+  inject-config:
+    image: dendrite2go/configmanager
+    init: true
+    networks:
+      - ${ENSEMBLE_NAME}
+    entrypoint:
+      - /bin/bash
+      - "-c"
+      - "${PROJECT}/bin/inject-keys.sh -v 'config-manager:8181'"
+    volumes:
+      - type: bind
+        source: ${PROJECT}/bin
+        target: ${PROJECT}/bin
+      - type: bind
+        source: ${PROJECT}/etc
+        target: ${PROJECT}/etc
+      - type: bind
+        source: ${PROJECT}/target
+        target: ${PROJECT}/target
+# ${INJECT_CONFIG_VOLUMES}
 
 volumes:
   axon-data:

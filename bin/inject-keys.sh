@@ -4,6 +4,7 @@ BIN="$(cd "$(dirname "$0")" ; pwd)"
 PROJECT="$(dirname "${BIN}")"
 
 source "${BIN}/verbose.sh"
+source "${BIN}/lib-sed.sh"
 
 "${BIN}/create-local-settings.sh"
 
@@ -14,7 +15,74 @@ then
   SIGN_PRIVATE_KEY="${ROOT_PRIVATE_KEY}"
 fi
 
+function is-prefix() {
+  local FIRST="$1"
+  local SECOND="$2"
+  local DOTS="$(echo -n  "${FIRST}" | tr -c '' '.')"
+  local CHUNK="$(echo "${SECOND}" | sed "${SED_EXT}" "s/^(${DOTS}).*$/\\1/")"
+  test ".${CHUNK}" = ".${FIRST}"
+}
+
+if [ \! -x "/opt/configmanager" ]
+then
+  info "Run in docker container"
+  VOLUMES=("${PROJECT}")
+  for F in "${ROOT_PRIVATE_KEY}" "${SIGN_PRIVATE_KEY}"
+  do
+    D="$(dirname "$F")"
+    PREFIX='false'
+    for P in "${VOLUMES[@]}"
+    do
+      if is-prefix "${P}" "${D}"
+      then
+        PREFIX='true'
+      fi
+    done
+    if "${PREFIX}"
+    then
+      :
+    else
+      VOLUMES[${#VOLUMES[@]}]="${D}"
+    fi
+  done
+  VOLUME_ARGS=()
+  for V in "${VOLUMES[@]}"
+  do
+    VOLUME_ARGS[${#VOLUME_ARGS[@]}]='-v'
+    VOLUME_ARGS[${#VOLUME_ARGS[@]}]="${V}:${V}"
+  done
+  docker run --rm -i --init \
+      "${VOLUME_ARGS[@]}" -w "$(pwd)" \
+      --entrypoint /bin/bash \
+      dendrite2go/configmanager \
+      -c "${PROJECT}/bin/inject-keys.sh ${FLAGS_INHERIT[@]} '${AUTHORITY:-host.docker.internal:3000}'"
+  exit $?
+fi
+
 AUTHORITY="$1" ; shift
+
+function readyness-test() {
+  echo ">>> Properties
+actuator.test=test
+>>> End" \
+  | "/opt/configmanager" "${AUTHORITY:-host.docker.internal:3000}" 2>&1 \
+  | sed \
+      -e '/[Ee]rror/!d' \
+      -e 's/Error.*desc = //'
+}
+
+while true
+do
+  RESPONSE="$(readyness-test | head -1)"
+  log "RESPONSE: [${RESPONSE}]"
+  if [[ -z "${RESPONSE}" ]]
+  then
+    break
+  fi
+  sleep 3
+done
+
+log "READY!"
 
 (
   cd "${PROJECT}" || exit 1
@@ -36,23 +104,12 @@ AUTHORITY="$1" ; shift
     echo ">>> Identity Provider: ${SIGN_KEY_NAME}"
     cat "${SIGN_PRIVATE_KEY}"
 
-    echo ">>> Secrets"
-    cat "${PROJECT}/etc/secrets-local.yaml" \
-      | docker run --rm -i karlkfi/yq -r '.users | to_entries[] | .key + " " + .value.secret' \
-      | while read USER_ID PASSWORD_ENCRYPTED
-        do
-          log ">>> ${USER_ID}: ${PASSWORD_ENCRYPTED}"
-          echo "${USER_ID}=${PASSWORD_ENCRYPTED}"
-        done
-
-    if [[ -f ""${PROJECT}/etc/application-local.yaml"" ]]
+    CONFIG_DATA="${PROJECT}/target/config.data"
+    if [ -f "${CONFIG_DATA}" ]
     then
-      echo ">>> Properties"
-      cat "${PROJECT}/etc/application-local.yaml" \
-        | docker run --rm -i karlkfi/yq -r --stream \
-            '. | select(length > 1) | .[0][0] + (reduce .[0][1:][] as $item ("" ; . + "." + ($item | tostring))) + "=" + .[1]'
+      cat "${CONFIG_DATA}"
     fi
 
     echo '>>> End'
-  ) | docker run --rm -i dendrite2go/configmanager "${AUTHORITY:-host.docker.internal:3000}"
+  ) | "/opt/configmanager" "${AUTHORITY:-host.docker.internal:3000}"
 )

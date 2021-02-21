@@ -223,9 +223,9 @@ dependencies = [
 
 [[package]]
 name = "dendrite"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7917dca219ad7a906a10991e0081916a99293805551619dbc9a2340064be92a"
+checksum = "759afaabef7c3ab21a0afc4e9f7e3dae2ba63c277895e893102ab0ff028bd744"
 dependencies = [
  "anyhow",
  "async-lock",
