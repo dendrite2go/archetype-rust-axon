@@ -7,6 +7,7 @@ use dendrite::axon_utils::platform_worker;
 use dendrite_example::example_api::init;
 use dendrite_example::example_command::handle_commands;
 use dendrite_example::example_event::process_events;
+use dendrite_example::example_event::auth as event_auth;
 use dendrite_example::example_query::process_queries;
 use dendrite_example::grpc_example::greeter_service_server::GreeterServiceServer;
 use tonic::{Request, Status};
@@ -23,6 +24,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(handle_commands(greeter_server.axon_server_handle.clone()));
 
     tokio::spawn(process_events(greeter_server.axon_server_handle.clone()));
+
+    tokio::spawn(event_auth::process_events(greeter_server.axon_server_handle.clone()));
 
     tokio::spawn(process_queries(greeter_server.axon_server_handle.clone()));
 
