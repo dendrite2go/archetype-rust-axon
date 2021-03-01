@@ -72,7 +72,7 @@ async fn internal_process_events(axon_server_handle : AxonServerHandle) -> Resul
 #[dendrite_macros::event_handler]
 async fn handle_trusted_key_added_event(command: TrustedKeyAddedEvent, _query_model: AuthQueryModel) -> Result<()> {
     if let Some(public_key) = command.public_key.clone() {
-        unsafe_set_public_key(public_key)?
+        unchecked_set_public_key(public_key)?
     }
     Ok(())
 }
@@ -85,7 +85,7 @@ async fn handle_trusted_key_removed_event(command: TrustedKeyRemovedEvent, _quer
 #[dendrite_macros::event_handler]
 async fn handle_key_manager_added_event(command: KeyManagerAddedEvent, _query_model: AuthQueryModel) -> Result<()> {
     if let Some(public_key) = command.public_key.clone() {
-        unsafe_set_key_manager(public_key)?
+        unchecked_set_key_manager(public_key)?
     }
     Ok(())
 }
@@ -98,7 +98,7 @@ async fn handle_key_manager_removed_event(command: KeyManagerRemovedEvent, _quer
 #[dendrite_macros::event_handler]
 async fn handle_credentials_added_event(command: CredentialsAddedEvent, _query_model: AuthQueryModel) -> Result<()> {
     if let Some(credentials) = command.credentials.clone() {
-        unsafe_set_credentials(credentials)?
+        unchecked_set_credentials(credentials)?
     }
     Ok(())
 }
@@ -118,19 +118,19 @@ pub fn set_private_key(key_name: String, pem_string: String) -> Result<()> {
     Ok(())
 }
 
-fn unsafe_set_public_key(public_key: dendrite_config::PublicKey) -> Result<()> {
+pub fn unchecked_set_public_key(public_key: dendrite_config::PublicKey) -> Result<()> {
     let mut auth_settings = AUTH.auth_settings.lock().map_err(|e| anyhow!(e.to_string()))?;
     auth_settings.trusted_keys.insert(public_key.name, public_key.public_key);
     Ok(())
 }
 
-fn unsafe_set_key_manager(public_key: dendrite_config::PublicKey) -> Result<()> {
+pub fn unchecked_set_key_manager(public_key: dendrite_config::PublicKey) -> Result<()> {
     let mut auth_settings = AUTH.auth_settings.lock().map_err(|e| anyhow!(e.to_string()))?;
     auth_settings.key_managers.insert(public_key.name, public_key.public_key);
     Ok(())
 }
 
-fn unsafe_set_credentials(credentials: dendrite_config::Credentials) -> Result<()> {
+fn unchecked_set_credentials(credentials: dendrite_config::Credentials) -> Result<()> {
     let mut auth_settings = AUTH.auth_settings.lock().map_err(|e| anyhow!(e.to_string()))?;
     auth_settings.credentials.insert(credentials.identifier, credentials.secret);
     Ok(())

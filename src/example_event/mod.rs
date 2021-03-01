@@ -9,6 +9,7 @@ use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::grpc_example::{GreetedEvent,Greeting};
 
 pub mod auth;
+pub mod trusted_generated;
 
 #[derive(Clone)]
 struct ExampleQueryModel {

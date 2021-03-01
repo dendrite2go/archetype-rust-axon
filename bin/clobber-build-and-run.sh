@@ -108,6 +108,9 @@ function waitForDockerComposeReady() {
 
         if "${DO_BUILD_BACK_END}"
         then
+            # Generate module "trusted_generated".
+            "${BIN}/generate-module-for-trusted-keys.sh" -v
+
             # Build server executables from Rust sources
             info "Build executables for the back-end"
             DOCKER_FLAGS=()
