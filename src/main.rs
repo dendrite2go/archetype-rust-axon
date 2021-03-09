@@ -1,5 +1,5 @@
 use std::error::Error;
-use log::{debug,info};
+use log::{debug,info,warn};
 
 use tonic::transport::Server;
 
@@ -47,5 +47,10 @@ fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
         None => ""
     };
     debug!("Using token: [{:?}]", token);
+    let credentials = event_auth::verify_jwt(token);
+    match credentials {
+        Ok(claims) => debug!("Credentials: [{:?}]", claims),
+        Err(error) => warn!("JWT parsing error: {:?}", error),
+    };
     Ok(req)
 }

@@ -14,6 +14,9 @@ class Greet extends Component {
         this.handleStop = this.handleStop.bind(this);
         this.greetUrl = window.location.href.replace(/\/$/, ''); // 'http://' + window.location.hostname + ':3000'
         this.configUrl = this.greetUrl.replace(/(:[0-9]*)?$/, ':8118');
+        this.state = {
+            jwt: ''
+        };
         console.log('Greet URL:', this.greetUrl);
         console.log('Example grpc-web stub:', example);
         console.log('Config grpc-web stub:', dendrite_config);
@@ -61,8 +64,11 @@ class Greet extends Component {
         response.on('error', function(e) {
             console.log('Login: authorization error:', e);
         });
+        const self = this;
         response.on('data', function(r) {
-            console.log('Login: authorization response:', r);
+            const jwt = r.getJwt();
+            self.setState({'jwt': jwt});
+            console.log('Login: authorization response:', r, jwt);
         });
     }
 
@@ -75,7 +81,7 @@ class Greet extends Component {
         console.log('Submit: request:', request);
         const client = new example.GreeterServiceClient(this.greetUrl);
         console.log('Submit: client:', client);
-        const response = client.greet(request, {"authorization": "my-jwt-token"});
+        const response = client.greet(request, {"authorization": this.state.jwt});
         console.log('Submit: response:', response);
         response.on('data', function(r) {console.log('Greet event:', r);})
         response.on('status', function(status) {

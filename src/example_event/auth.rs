@@ -1,15 +1,25 @@
 use anyhow::{Context,Result,anyhow};
 use core::convert::TryFrom;
 use dendrite::axon_utils::{AsyncApplicableTo, AxonServerHandle, TheHandlerRegistry, TokenStore, empty_handler_registry, event_processor};
+use jwt::{Header, Token, VerifyWithKey, AlgorithmType, Error};
+use jwt::algorithm::AlgorithmType::Rs256;
+use jwt::token::Unverified;
 use lazy_static::lazy_static;
-use log::{debug,error};
+use log::{debug,error,warn};
+use pem;
 use prost::Message;
+use rsa::{RSAPrivateKey, PublicKey, PaddingScheme};
+use rsa::hash::Hash::SHA2_256;
+use serde_json::Value;
+use sha2::{Digest,Sha256};
+use sha2::digest::FixedOutput;
+use sshkeys;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use pem;
-use rsa::RSAPrivateKey;
 use crate::dendrite_config;
 use crate::dendrite_config::{CredentialsAddedEvent, CredentialsRemovedEvent, KeyManagerAddedEvent, KeyManagerRemovedEvent, TrustedKeyAddedEvent, TrustedKeyRemovedEvent};
+
+const SEPARATOR: &str = ".";
 
 struct AuthSettings {
     key_managers: HashMap<String,String>,
@@ -152,4 +162,51 @@ fn remove_credentials(identifier: &str) -> Result<()> {
     let mut auth_settings = AUTH.auth_settings.lock().map_err(|e| anyhow!(e.to_string()))?;
     auth_settings.credentials.remove(identifier);
     Ok(())
+}
+
+struct AuthPublicKey(rsa::RSAPublicKey);
+
+impl jwt::VerifyingAlgorithm for AuthPublicKey {
+    fn algorithm_type(&self) -> AlgorithmType {
+        Rs256
+    }
+
+    fn verify_bytes(&self, header: &str, claims: &str, signature: &[u8]) -> Result<bool, Error> {
+        let mut hasher = Sha256::new();
+        hasher.update(header.as_bytes());
+        sha2::Digest::update(&mut hasher, SEPARATOR.as_bytes());
+        sha2::Digest::update(&mut hasher, claims.as_bytes());
+        let hashed: &[u8] = &hasher.finalize_fixed();
+        debug!("Verify signature: {:?}: {:?}", signature, hashed);
+        self.0.verify(PaddingScheme::PKCS1v15Sign {hash:Some(SHA2_256)}, hashed, signature)
+            .map_err(|e| {
+                warn!("Error during verification of JWT: {:?}", e);
+                Error::InvalidSignature
+            })?;
+        Ok(true)
+    }
+}
+
+pub fn verify_jwt(jwt: &str) -> Result<HashMap<String,Value>> {
+    let unverified: Token<Header,HashMap<String,Value>,Unverified> = Token::parse_unverified(jwt)?;
+    let header = unverified.header();
+    debug!("Header: {:?}", header);
+    if let Some(ref key_id) = header.key_id {
+        let auth_settings = AUTH.auth_settings.lock().map_err(|e| anyhow!(e.to_string()))?;
+        if let Some(key) = auth_settings.trusted_keys.get(key_id) {
+            debug!("Key: {:?}", key);
+            let key = format!("ssh-rsa {}", key);
+            let public_key = sshkeys::PublicKey::from_string(&key)?;
+            debug!("SSH public key: {:?}", public_key);
+            if let sshkeys::PublicKey{kind: sshkeys::PublicKeyKind::Rsa(sshkeys::RsaPublicKey {n, e}), ..} = public_key {
+                let n = rsa::BigUint::from_bytes_be(&n);
+                let e = rsa::BigUint::from_bytes_be(&e);
+                let public_key = rsa::RSAPublicKey::new(n, e)?;
+                debug!("RSH public key: {:?}", public_key);
+                let verified = unverified.verify_with_key(&AuthPublicKey(public_key))?;
+                return Ok(verified.claims().clone());
+            }
+        }
+    }
+    Err(anyhow!("Invalid signature"))
 }
