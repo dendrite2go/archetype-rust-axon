@@ -4,10 +4,10 @@ use log::{debug,info,warn};
 use tonic::transport::Server;
 
 use dendrite::axon_utils::platform_worker;
+use dendrite_auth;
 use dendrite_example::example_api::init;
 use dendrite_example::example_command::handle_commands;
 use dendrite_example::example_event::process_events;
-use dendrite_example::example_event::auth as event_auth;
 use dendrite_example::example_event::trusted_generated;
 use dendrite_example::example_query::process_queries;
 use dendrite_example::grpc_example::greeter_service_server::GreeterServiceServer;
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(process_events(greeter_server.axon_server_handle.clone()));
 
     trusted_generated::init()?;
-    tokio::spawn(event_auth::process_events(greeter_server.axon_server_handle.clone()));
+    tokio::spawn(dendrite_auth::process_events(greeter_server.axon_server_handle.clone()));
 
     tokio::spawn(process_queries(greeter_server.axon_server_handle.clone()));
 
@@ -47,7 +47,7 @@ fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
         None => ""
     };
     debug!("Using token: [{:?}]", token);
-    let credentials = event_auth::verify_jwt(token);
+    let credentials = dendrite_auth::verify_jwt(token);
     match credentials {
         Ok(claims) => debug!("Credentials: [{:?}]", claims),
         Err(error) => warn!("JWT parsing error: {:?}", error),

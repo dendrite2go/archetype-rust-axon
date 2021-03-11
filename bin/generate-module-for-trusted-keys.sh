@@ -13,8 +13,8 @@ mkdir -p "$(dirname "${MODULE}")"
 echo '//! Generated module. Do not edit.
 
 use anyhow::Result;
-use crate::dendrite_config::PublicKey;
-use crate::example_event::auth;
+use dendrite_auth::dendrite_config::PublicKey;
+use dendrite_auth;
 
 pub fn init() -> Result<()> {' > "${MODULE}"
 (
@@ -42,8 +42,8 @@ pub fn init() -> Result<()> {' > "${MODULE}"
     echo "        name: \"${NAME}\".to_string(),"
     echo "        public_key: \"${KEY}\".to_string(),"
     echo "    };"
-    echo "    auth::unchecked_set_public_key(public_key.clone())?;"
-    echo "    auth::unchecked_set_key_manager(public_key.clone())?;"
+    echo "    dendrite_auth::unchecked_set_public_key(public_key.clone())?;"
+    echo "    dendrite_auth::unchecked_set_key_manager(public_key.clone())?;"
   done >> "${MODULE}"
 )
 echo '    Ok(())
