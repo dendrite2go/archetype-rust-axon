@@ -1,6 +1,6 @@
 use anyhow::{Context,Result,anyhow};
 use async_lock::Mutex;
-use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonConnection, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, command_worker, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry};
+use dendrite::axon_utils::{AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, command_worker, create_aggregate_definition, empty_handler_registry, empty_aggregate_registry};
 use log::{debug,error};
 use prost::{Message};
 use std::sync::Arc;
@@ -19,11 +19,7 @@ pub async fn handle_commands(axon_server_handle : AxonServerHandle) {
 
 async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Result<()> {
     debug!("Handle commands for example application");
-    let axon_connection = AxonConnection {
-        id: axon_server_handle.display_name,
-        conn: axon_server_handle.conn,
-    };
-    debug!("Axon connection: {:?}", axon_connection);
+    debug!("Axon server handle: {:?}", &axon_server_handle);
 
     let mut sourcing_handler_registry = empty_handler_registry();
     let mut command_handler_registry: TheHandlerRegistry<Arc<Mutex<AggregateContext<GreeterProjection>>>,SerializedObject> = empty_handler_registry();
@@ -46,7 +42,7 @@ async fn internal_handle_commands(axon_server_handle : AxonServerHandle) -> Resu
     let mut aggregate_registry = empty_aggregate_registry();
     aggregate_registry.handlers.insert(aggregate_definition.projection_name.clone(), Arc::new(Arc::new(aggregate_definition)));
 
-    command_worker(axon_connection, &mut aggregate_registry).await.context("Error while handling commands")
+    command_worker(axon_server_handle, &mut aggregate_registry).await.context("Error while handling commands")
 }
 
 fn empty_projection() -> GreeterProjection {
