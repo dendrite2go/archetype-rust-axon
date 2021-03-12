@@ -4,6 +4,7 @@
 //!
 //! See the GitHub project [dendrite2go/dendrite](https://github.com/dendrite2go/archetype-rust-axon) for an example of how to use this code.
 
+pub mod application;
 pub mod dendrite_config;
 pub mod elastic_search_utils;
 pub mod example_api;
