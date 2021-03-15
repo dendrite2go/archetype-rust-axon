@@ -61,7 +61,7 @@ static_resources:
                             host_rewrite: config-manager
                             cluster: service_config
                         - match:
-                            prefix: "/grpc_example"
+                            prefix: "/proto_example"
                             grpc: {}
                           route:
                             host_rewrite: rustic-command-api

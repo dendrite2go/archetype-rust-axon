@@ -32,7 +32,7 @@ Wait until everything is available (ElasticSearch is usually last). When everyth
 
 # Design
 
-Both the gRPC API that is exposed to the front-end and the payloads of the messages that are exchanged with AxonServer are defined using [Protocol Buffers](https://developers.google.com/protocol-buffers). This includes Commands, Command Projections, Command Results, Events, Queries, Query Results. (See [grpc_example.proto](https://github.com/dendrite2go/archetype-rust-axon/blob/master/proto/grpc_example.proto) for an example.) As events are stored in AxonServer indefinitely, extra attention and effort is advisable to evolve the definitions of events carefully. Dendrite does not support upcasters and there are currently no plans for adding them. Introduce new types of events rather than changing existing ones, if possible. Make changes that are both backwards and forwards compatible if existing events need to be changed. Test with lots of data and rebuild all query models when changing event definitions.
+Both the gRPC API that is exposed to the front-end and the payloads of the messages that are exchanged with AxonServer are defined using [Protocol Buffers](https://developers.google.com/protocol-buffers). This includes Commands, Command Projections, Command Results, Events, Queries, Query Results. (See [proto_example.proto](https://github.com/dendrite2go/archetype-rust-axon/blob/master/proto/proto_example.proto) for an example.) As events are stored in AxonServer indefinitely, extra attention and effort is advisable to evolve the definitions of events carefully. Dendrite does not support upcasters and there are currently no plans for adding them. Introduce new types of events rather than changing existing ones, if possible. Make changes that are both backwards and forwards compatible if existing events need to be changed. Test with lots of data and rebuild all query models when changing event definitions.
 
 A CQRS application based on AxonServer consists of loosely coupled parts that can be easily separated into microservices and that can be independently and horizontally scaled at will. There are five types of parts:
 
@@ -42,7 +42,7 @@ A CQRS application based on AxonServer consists of loosely coupled parts that ca
 4. Query API
 5. Query Processor
 
-To start with it is advisable to combine all these components in a single back-end application (a structured monolith). The example application is also structured like this. When the application grows, parts can be separated out into different microservices as needed.
+When starting with a new application, it is advisable to combine all these components in a single back-end application (a structured monolith). The example application is also structured like this. When the application grows, parts can be separated out into different microservices as needed.
 
 The responsibility of the Command API is to accept commands and submit them to AxonServer. Command API and Query API are often combined, but it is possible to define them as separate services in the proto definition and to create dedicated microservices for them. When the application grows, it also makes sense to split the API according to DDD Bounded Contexts.
 

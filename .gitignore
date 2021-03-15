@@ -2,6 +2,7 @@
 /data/local/
 /docker/docker-compose.yml
 /src/example_event/trusted_generated.rs
+proto_*.rs
 
 /present/src/grpc/
 /present/node_modules/

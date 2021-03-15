@@ -1,5 +1,5 @@
-use std::error::Error;
 use log::info;
+use std::error::Error;
 
 use dendrite_example::application::application;
 

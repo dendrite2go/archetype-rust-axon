@@ -292,8 +292,6 @@ dependencies = [
 [[package]]
 name = "dendrite"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "467ac848e77a1e6ab7ccafcfeb2ac985fa34ca2e49eb69662fe11f0ab344fb8a"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -313,8 +311,6 @@ dependencies = [
 [[package]]
 name = "dendrite_auth"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37d364d49b6d0679180e3ca4339f7517af9e0564542f29fa732c17aaca57895f"
 dependencies = [
  "anyhow",
  "dendrite",

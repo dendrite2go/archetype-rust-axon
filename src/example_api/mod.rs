@@ -1,14 +1,21 @@
-use anyhow::{Error,Result};
+use crate::proto_example::greeter_service_server::GreeterService;
+use crate::proto_example::{
+    Acknowledgement, Empty, GreetCommand, GreetedEvent, Greeting, RecordCommand, SearchQuery,
+    SearchResponse, StopCommand,
+};
+use anyhow::{Error, Result};
 use bytes::Bytes;
-use dendrite::axon_utils::{AxonServerHandle, CommandSink, QuerySink, init_command_sender, query_events};
+use dendrite::axon_utils::{
+    init_command_sender, query_events, AxonServerHandle, CommandSink, QuerySink,
+};
+use dendrite::intellij_work_around::Debuggable;
 use futures_core::stream::Stream;
-use log::{debug};
+use log::debug;
 use prost::Message;
+use std::fmt::Debug;
 use std::pin::Pin;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status};
-use crate::grpc_example::greeter_service_server::GreeterService;
-use crate::grpc_example::{Acknowledgement, Empty, GreetedEvent, Greeting, GreetCommand, RecordCommand, StopCommand, SearchQuery, SearchResponse};
 
 /// Carries an `AxonServerHandle` and implements the `prost` generated `GreeterService`.
 ///
@@ -20,12 +27,12 @@ pub struct GreeterServer {
 
 #[tonic::async_trait]
 impl GreeterService for GreeterServer {
-    async fn greet(
-        &self,
-        request: Request<Greeting>,
-    ) -> Result<Response<Acknowledgement>, Status> {
-        debug!("Got a greet request: {:?}", request);
+    async fn greet(&self, request: Request<Greeting>) -> Result<Response<Acknowledgement>, Status> {
         let inner_request = request.into_inner();
+        debug!(
+            "Got a greet request: {:?}",
+            Debuggable::from(&inner_request)
+        );
         let result_message = inner_request.message.clone();
 
         let command = GreetCommand {
@@ -33,11 +40,18 @@ impl GreeterService for GreeterServer {
             message: Some(inner_request),
         };
 
-        if let Some(serialized) = self.axon_server_handle.send_command("GreetCommand", Box::new(&command)).await
+        if let Some(serialized) = self
+            .axon_server_handle
+            .send_command("GreetCommand", Box::new(&command))
+            .await
             .map_err(to_status)?
         {
-            let reply_from_command_handler = Message::decode(Bytes::from(serialized.data)).map_err(decode_error_to_status)?;
-            debug!("Reply from command handler: {:?}", reply_from_command_handler);
+            let reply_from_command_handler =
+                Message::decode(Bytes::from(serialized.data)).map_err(decode_error_to_status)?;
+            debug!(
+                "Reply from command handler: {:?}",
+                Debuggable::from(&reply_from_command_handler)
+            );
             return Ok(Response::new(reply_from_command_handler));
         }
 
@@ -48,52 +62,69 @@ impl GreeterService for GreeterServer {
         Ok(Response::new(default_reply))
     }
 
-    async fn record(
-        &self,
-        request: Request<Empty>,
-    ) -> Result<Response<Empty>, Status> {
-        debug!("Got a record request: {:?}", request);
+    async fn record(&self, request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        debug!(
+            "Got a record request: {:?}",
+            Debuggable::from(&request.into_inner())
+        );
 
         let command = RecordCommand {
             aggregate_identifier: "xxx".to_string(),
         };
 
-        self.axon_server_handle.send_command("RecordCommand", Box::new(&command)).await.map_err(to_status)?;
+        self.axon_server_handle
+            .send_command("RecordCommand", Box::new(&command))
+            .await
+            .map_err(to_status)?;
 
-        let reply = Empty { };
+        let reply = Empty {};
 
         Ok(Response::new(reply))
     }
 
-    async fn stop(
-        &self,
-        request: Request<Empty>,
-    ) -> Result<Response<Empty>, Status> {
-        debug!("Got a stop request: {:?}", request);
+    async fn stop(&self, request: Request<Empty>) -> Result<Response<Empty>, Status> {
+        debug!(
+            "Got a stop request: {:?}",
+            Debuggable::from(&request.into_inner())
+        );
 
         let command = StopCommand {
             aggregate_identifier: "xxx".to_string(),
         };
 
-        self.axon_server_handle.send_command("StopCommand", Box::new(&command)).await.map_err(to_status)?;
+        self.axon_server_handle
+            .send_command("StopCommand", Box::new(&command))
+            .await
+            .map_err(to_status)?;
 
-        let reply = Empty { };
+        let reply = Empty {};
 
         Ok(Response::new(reply))
     }
 
-    type GreetingsStream = Pin<Box<dyn Stream<Item=Result<Greeting, Status>> + Send + Sync + 'static>>;
+    type GreetingsStream =
+        Pin<Box<dyn Stream<Item = Result<Greeting, Status>> + Send + Sync + 'static>>;
 
-    async fn greetings(&self, _request: Request<Empty>) -> Result<Response<Self::GreetingsStream>, Status> {
-        let events = query_events(&self.axon_server_handle, "xxx").await.map_err(to_status)?;
-        let (tx, mut rx) : (mpsc::Sender<Result<Greeting>>, mpsc::Receiver<Result<Greeting>>) = mpsc::channel(4);
+    async fn greetings(
+        &self,
+        _request: Request<Empty>,
+    ) -> Result<Response<Self::GreetingsStream>, Status> {
+        let events = query_events(&self.axon_server_handle, "xxx")
+            .await
+            .map_err(to_status)?;
+        let (tx, mut rx): (
+            mpsc::Sender<Result<Greeting>>,
+            mpsc::Receiver<Result<Greeting>>,
+        ) = mpsc::channel(4);
 
         tokio::spawn(async move {
             for event in &events[..] {
                 let event = event.clone();
                 if let Some(payload) = event.payload {
                     if payload.r#type == "GreetedEvent" {
-                        let greeted_event_message = GreetedEvent::decode(Bytes::from(payload.data)).ok().map(|e| e.message);
+                        let greeted_event_message = GreetedEvent::decode(Bytes::from(payload.data))
+                            .ok()
+                            .map(|e| e.message);
                         if let Some(greeting) = greeted_event_message.flatten() {
                             debug!("Greeting: {:?}", greeting);
                             tx.send(Ok(greeting)).await.ok();
@@ -104,7 +135,7 @@ impl GreeterService for GreeterServer {
             let greeting = Greeting {
                 message: "End of stream -oo-".to_string(),
             };
-            debug!("End of stream: {:?}", greeting);
+            debug!("End of stream: {:?}", Debuggable::from(&greeting));
             tx.send(Ok(greeting)).await.ok();
         });
 
@@ -117,16 +148,29 @@ impl GreeterService for GreeterServer {
         Ok(Response::new(Box::pin(output) as Self::GreetingsStream))
     }
 
-    type SearchStream = Pin<Box<dyn Stream<Item=Result<Greeting, Status>> + Send + Sync + 'static>>;
+    type SearchStream =
+        Pin<Box<dyn Stream<Item = Result<Greeting, Status>> + Send + Sync + 'static>>;
 
-    async fn search(&self, request: Request<SearchQuery>) -> Result<Response<Self::SearchStream>, Status> {
-        let (tx, mut rx) : (mpsc::Sender<Result<Greeting>>, mpsc::Receiver<Result<Greeting>>) = mpsc::channel(4);
+    async fn search(
+        &self,
+        request: Request<SearchQuery>,
+    ) -> Result<Response<Self::SearchStream>, Status> {
+        let (tx, mut rx): (
+            mpsc::Sender<Result<Greeting>>,
+            mpsc::Receiver<Result<Greeting>>,
+        ) = mpsc::channel(4);
         let query = request.into_inner();
-        let query_response = self.axon_server_handle.send_query("SearchQuery", Box::new(&query)).await.map_err(to_status)?;
+        let query_response = self
+            .axon_server_handle
+            .send_query("SearchQuery", Box::new(&query))
+            .await
+            .map_err(to_status)?;
 
         tokio::spawn(async move {
             for serialized_object in query_response {
-                if let Ok(search_response) = SearchResponse::decode(Bytes::from(serialized_object.data)) {
+                if let Ok(search_response) =
+                    SearchResponse::decode(Bytes::from(serialized_object.data))
+                {
                     debug!("Search response: {:?}", search_response);
                     for greeting in search_response.greetings {
                         debug!("Greeting: {:?}", greeting);
@@ -150,7 +194,11 @@ impl GreeterService for GreeterServer {
 
 /// Initialises a `GreeterServer`.
 pub async fn init() -> Result<GreeterServer> {
-    init_command_sender().await.map(|command_sink| {GreeterServer{ axon_server_handle: command_sink }})
+    init_command_sender()
+        .await
+        .map(|command_sink| GreeterServer {
+            axon_server_handle: command_sink,
+        })
 }
 
 fn to_status(e: Error) -> Status {

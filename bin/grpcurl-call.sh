@@ -2,6 +2,7 @@
 
 BIN="$(cd "$(dirname "$0")" ; pwd)"
 PROJECT="$(dirname "${BIN}")"
+PROTO_DIR="${PROJECT}/proto"
 
 source "${BIN}/verbose.sh"
 
@@ -16,50 +17,43 @@ VARIABLE='message'
 VALUE='{}'
 case "$1" in
 --greet)
-  PROTO="grpc_example.proto"
+  PROTO="proto_example.proto"
   PORT='3000'
-  URL='grpc_example.GreeterService/Greet'
+  URL='proto_example.GreeterService/Greet'
   shift
   ;;
 --record)
-  PROTO="grpc_example.proto"
+  PROTO="proto_example.proto"
   PORT='3000'
-  URL='grpc_example.GreeterService/Record'
+  URL='proto_example.GreeterService/Record'
   VARIABLE=''
   shift
   ;;
 --stop)
-  PROTO="grpc_example.proto"
+  PROTO="proto_example.proto"
   PORT='3000'
-  URL='grpc_example.GreeterService/Stop'
+  URL='proto_example.GreeterService/Stop'
   VARIABLE=''
   shift
   ;;
 --greetings)
-  PROTO="grpc_example.proto"
+  PROTO="proto_example.proto"
   PORT='3000'
-  URL='grpc_example.GreeterService/Greetings'
+  URL='proto_example.GreeterService/Greetings'
   VARIABLE=''
   shift
   ;;
 --search)
-  PROTO="grpc_example.proto"
+  PROTO="proto_example.proto"
   PORT='3000'
-  URL='grpc_example.GreeterService/Search'
+  URL='proto_example.GreeterService/Search'
   VARIABLE='query'
   shift
   ;;
 --direct)
-  PROTO="grpc_example.proto"
+  PROTO="proto_example.proto"
   PORT='8181'
-  URL='grpc_example.GreeterService/Greet'
-  shift
-  ;;
---hello)
-  PROTO="hello_world.proto"
-  PORT='50051'
-  URL='hello_world.Greeter/SayHello'
-  VARIABLE='name'
+  URL='proto_example.GreeterService/Greet'
   shift
   ;;
 --authorize)
@@ -68,6 +62,9 @@ case "$1" in
   URL='dendrite_config.ConfigurationService/Authorize'
   VARIABLE=''
   shift
+  PROTO_DIR="${PROJECT}/target/proto"
+  mkdir -p "${PROTO_DIR}"
+  sed -e '/^package/s/ proto_/ /' "${PROJECT}/proto/proto_dendrite_config.proto" > "${PROTO_DIR}/dendrite_config.proto"
   ;;
 *)
   exit 1
@@ -88,5 +85,5 @@ else
 fi
 
 docker run --rm -v "${PROJECT}:${PROJECT}" -w "${PROJECT}" -ti \
-  fullstorydev/grpcurl -plaintext -import-path "${PROJECT}/proto" -proto "${PROTO}" \
+  fullstorydev/grpcurl -plaintext -import-path "${PROTO_DIR}" -proto "${PROTO}" \
     -d "${PAYLOAD}" "${HOST}:${PORT}" "${URL}"

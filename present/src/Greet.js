@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
-import example from './grpc/backend/grpc_example_grpc_web_pb';
-import dendrite_config from './grpc/backend/dendrite_config_grpc_web_pb';
-// import example_message from './grpc/example/grpc_example_pb';
+import example from './grpc/backend/proto_example_grpc_web_pb';
+import dendrite_config from './grpc/backend/proto_dendrite_config_grpc_web_pb';
 
 class Greet extends Component {
     constructor(props) {

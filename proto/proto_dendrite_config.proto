@@ -1,58 +1,22 @@
 syntax = "proto3";
-//package org.leialearns.grpc.example;
-package grpc_example;
+package proto_dendrite_config;
+option go_package = "src/pkg/grpc/dendrite_config";
 
 // API
 
-/* The GreeterService defines the gRPC requests for greeting AxonServer. */
-service GreeterService {
-    rpc Greet (Greeting) returns (Acknowledgement) {}
-    rpc Record (Empty) returns (Empty) {}
-    rpc Stop (Empty) returns (Empty) {}
-    rpc Greetings (Empty) returns (stream Greeting) {}
-    rpc Search (SearchQuery) returns (stream Greeting) {}
-/*
-    rpc Time (AccessToken) returns (Greeting) {}
-
+/* The ConfigurationService defines the gRPC requests for configuring Dendrite applications. */
+service ConfigurationService {
     rpc ListTrustedKeys (Empty) returns (stream PublicKey) {}
     rpc ChangeTrustedKeys (stream TrustedKeyRequest) returns (stream TrustedKeyResponse) {}
     rpc SetPrivateKey(PrivateKey) returns (Empty) {}
     rpc ChangeCredentials(stream Credentials) returns (Empty) {}
     rpc Authorize (Credentials) returns (AccessToken) {}
     rpc SetProperty (KeyValue) returns (Empty) {}
-*/
-}
-
-message Greeting {
-    string message = 1;
-}
-
-message Acknowledgement {
-    string message = 1;
 }
 
 message Empty {}
 
-//  Aggregates
-
-message GreeterProjection {
-    bool isRecording = 1;
-}
-
 //  Commands
-
-message GreetCommand {
-    string aggregateIdentifier = 1;
-    Greeting message = 2;
-}
-
-message RecordCommand {
-    string aggregateIdentifier = 1;
-}
-
-message StopCommand {
-    string aggregateIdentifier = 1;
-}
 
 message RegisterTrustedKeyCommand {
     PublicKey publicKey = 1;
@@ -71,14 +35,6 @@ message ChangePropertyCommand {
 }
 
 // Events
-
-message GreetedEvent {
-    Greeting message = 1;
-}
-
-message StartedRecordingEvent {}
-
-message StoppedRecordingEvent {}
 
 message TrustedKeyAddedEvent {
     PublicKey publicKey = 1;
@@ -106,16 +62,6 @@ message CredentialsRemovedEvent {
 
 message PropertyChangedEvent {
     KeyValue property = 1;
-}
-
-// Queries
-
-message SearchQuery {
-    string query = 1;
-}
-
-message SearchResponse {
-    repeated Greeting greetings = 1;
 }
 
 // Access management

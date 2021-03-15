@@ -8,7 +8,7 @@ source "${PROJECT}/bin/verbose.sh"
 
 cd "${PROJECT}/proto"
 
-if [ \! -f 'grpc_example.proto' ]
+if [ \! -f 'proto_example.proto' ]
 then
   error "Protocol buffer specification files for back-end API not found in: $(pwd)"
 fi
