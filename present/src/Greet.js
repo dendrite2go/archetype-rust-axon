@@ -42,7 +42,7 @@ class Greet extends Component {
         );
     }
 
-    login(event) {
+    login(_event) {
         console.log('Login');
         const userName = document.getElementById('user-name').value;
         const password = document.getElementById('password').value;
@@ -71,7 +71,7 @@ class Greet extends Component {
         });
     }
 
-    handleSubmit(event) {
+    handleSubmit(_event) {
         const message = document.getElementById('message').value;
         console.log('Submit: message:', message);
         const request = new example.Greeting();
@@ -90,7 +90,7 @@ class Greet extends Component {
         });
     }
 
-    handleQuery(event) {
+    handleQuery(_event) {
         const query = document.getElementById('message').value;
         console.log('Query: query:', query);
 
@@ -159,7 +159,7 @@ class Greet extends Component {
         });
     }
 
-    handleRecord(event) {
+    handleRecord(_event) {
         const request = new example.Empty();
         console.log('Record: new request:', request);
         const client = new example.GreeterServiceClient(this.greetUrl);
@@ -174,7 +174,7 @@ class Greet extends Component {
         });
     }
 
-    handleStop(event) {
+    handleStop(_event) {
         const request = new example.Empty();
         console.log('Stop: new request:', request);
         const client = new example.GreeterServiceClient(this.greetUrl);
