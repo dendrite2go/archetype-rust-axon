@@ -2,7 +2,7 @@ use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::proto_example::{GreetedEvent, Greeting};
 use anyhow::{Context, Result};
 use dendrite::axon_utils::{
-    empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle,
+    empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle, Event,
     TheHandlerRegistry, TokenStore,
 };
 use dendrite::register;
@@ -83,7 +83,7 @@ async fn internal_process_events(axon_server_handle: AxonServerHandle) -> Result
 
 #[dendrite_macros::event_handler]
 pub async fn handle_greeted_event(
-    event: GreetedEvent,
+    event: Event<GreetedEvent>,
     query_model: ExampleQueryModel,
 ) -> Result<()> {
     debug!("Apply greeted event to ExampleQueryModel");
