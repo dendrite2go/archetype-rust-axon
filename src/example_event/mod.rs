@@ -1,8 +1,9 @@
 use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::proto_example::{GreetedEvent, Greeting};
 use anyhow::{Context, Result};
+use dendrite::axon_server::event::Event;
 use dendrite::axon_utils::{
-    empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle, Event,
+    empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle,
     TheHandlerRegistry, TokenStore,
 };
 use dendrite::register;
@@ -71,6 +72,7 @@ async fn internal_process_events(axon_server_handle: AxonServerHandle) -> Result
 
     let mut event_handler_registry: TheHandlerRegistry<
         ExampleQueryModel,
+        Event,
         Option<ExampleQueryModel>,
     > = empty_handler_registry();
 
@@ -83,10 +85,14 @@ async fn internal_process_events(axon_server_handle: AxonServerHandle) -> Result
 
 #[dendrite_macros::event_handler]
 pub async fn handle_greeted_event(
-    event: Event<GreetedEvent>,
+    event: GreetedEvent,
     query_model: ExampleQueryModel,
+    message: Event,
 ) -> Result<()> {
-    debug!("Apply greeted event to ExampleQueryModel");
+    debug!(
+        "Apply greeted event to ExampleQueryModel: {:?}",
+        message.timestamp
+    );
     let es_client = query_model.es_client.clone();
     if let Some(Greeting { message }) = event.message.clone() {
         let value = message.clone();

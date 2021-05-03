@@ -1,6 +1,7 @@
 use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::proto_example::{Greeting, SearchQuery, SearchResponse};
 use anyhow::{Context, Result};
+use dendrite::axon_server::query::QueryRequest;
 use dendrite::axon_utils::{
     axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry,
     QueryContext, QueryResult, TheHandlerRegistry,
@@ -32,8 +33,11 @@ async fn internal_process_queries(axon_server_handle: AxonServerHandle) -> Resul
 
     let query_context = ExampleQueryContext { es_client: client };
 
-    let mut query_handler_registry: TheHandlerRegistry<ExampleQueryContext, QueryResult> =
-        empty_handler_registry();
+    let mut query_handler_registry: TheHandlerRegistry<
+        ExampleQueryContext,
+        QueryRequest,
+        QueryResult,
+    > = empty_handler_registry();
 
     query_handler_registry.register(&handle_search_query)?;
 

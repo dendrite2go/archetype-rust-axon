@@ -4,6 +4,7 @@ use crate::proto_example::{
 };
 use anyhow::{anyhow, Context, Result};
 use async_lock::Mutex;
+use dendrite::axon_server::command::Command;
 use dendrite::axon_utils::{
     command_worker, create_aggregate_definition, empty_aggregate_registry, empty_handler_registry,
     AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonServerHandle,
@@ -32,6 +33,7 @@ async fn internal_handle_commands(axon_server_handle: AxonServerHandle) -> Resul
     let mut sourcing_handler_registry = empty_handler_registry();
     let mut command_handler_registry: TheHandlerRegistry<
         Arc<Mutex<AggregateContext<GreeterProjection>>>,
+        Command,
         SerializedObject,
     > = empty_handler_registry();
 
