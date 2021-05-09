@@ -42,7 +42,7 @@ impl GreeterService for GreeterServer {
 
         if let Some(serialized) = self
             .axon_server_handle
-            .send_command("GreetCommand", Box::new(&command))
+            .send_command("GreetCommand", &command)
             .await
             .map_err(to_status)?
         {
@@ -73,7 +73,7 @@ impl GreeterService for GreeterServer {
         };
 
         self.axon_server_handle
-            .send_command("RecordCommand", Box::new(&command))
+            .send_command("RecordCommand", &command)
             .await
             .map_err(to_status)?;
 
@@ -93,7 +93,7 @@ impl GreeterService for GreeterServer {
         };
 
         self.axon_server_handle
-            .send_command("StopCommand", Box::new(&command))
+            .send_command("StopCommand", &command)
             .await
             .map_err(to_status)?;
 
@@ -162,7 +162,7 @@ impl GreeterService for GreeterServer {
         let query = request.into_inner();
         let query_response = self
             .axon_server_handle
-            .send_query("SearchQuery", Box::new(&query))
+            .send_query("SearchQuery", &query)
             .await
             .map_err(to_status)?;
 
