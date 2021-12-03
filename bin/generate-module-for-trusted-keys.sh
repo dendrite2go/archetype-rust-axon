@@ -13,8 +13,8 @@ mkdir -p "$(dirname "${MODULE}")"
 echo '//! Generated module. Do not edit.
 
 use anyhow::Result;
-use dendrite_auth::dendrite_config::PublicKey;
-use dendrite_auth;
+use dendrite::auth::dendrite_config::PublicKey;
+use dendrite::auth as dendrite_auth;
 
 pub fn init() -> Result<()> {' > "${MODULE}"
 (

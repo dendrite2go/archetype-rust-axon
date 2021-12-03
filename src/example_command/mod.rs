@@ -11,6 +11,7 @@ use dendrite::axon_utils::{
     HandlerRegistry, SerializedObject, TheHandlerRegistry,
 };
 use dendrite::intellij_work_around::Debuggable;
+use dendrite::macros as dendrite_macros;
 use log::{debug, error};
 use prost::Message;
 use std::ops::Deref;

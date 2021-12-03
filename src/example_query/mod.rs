@@ -6,6 +6,7 @@ use dendrite::axon_utils::{
     axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry,
     QueryContext, QueryResult, TheHandlerRegistry,
 };
+use dendrite::macros as dendrite_macros;
 use elasticsearch::{Elasticsearch, SearchParts};
 use log::{debug, error};
 use prost::Message;

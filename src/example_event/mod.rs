@@ -6,6 +6,7 @@ use dendrite::axon_utils::{
     empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle,
     TheHandlerRegistry, TokenStore,
 };
+use dendrite::macros as dendrite_macros;
 use dendrite::register;
 use elasticsearch::{Elasticsearch, GetParts, IndexParts};
 use log::{debug, error};

@@ -1,5 +1,5 @@
+use dendrite::auth as dendrite_auth;
 use dendrite::axon_utils::platform_worker;
-use dendrite_auth;
 use log::{debug, info, warn};
 use std::error::Error;
 use tonic::transport::Server;
