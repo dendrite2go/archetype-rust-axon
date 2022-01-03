@@ -1,4 +1,3 @@
-use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::proto_example::{GreetedEvent, Greeting};
 use anyhow::{Context, Result};
 use dendrite::axon_server::event::Event;
@@ -6,52 +5,36 @@ use dendrite::axon_utils::{
     empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle,
     TheHandlerRegistry, TokenStore,
 };
+use dendrite::elasticsearch::{
+    create_elastic_query_model, wait_for_elastic_search, ElasticQueryModel,
+};
 use dendrite::macros as dendrite_macros;
 use dendrite::register;
-use elasticsearch::{Elasticsearch, GetParts, IndexParts};
+use elasticsearch::{Elasticsearch, IndexParts};
 use log::{debug, error};
 use prost::Message;
-use serde_json::{json, Value};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 
 pub mod trusted_generated;
 
 #[derive(Clone)]
-struct ExampleQueryModel {
-    es_client: Elasticsearch,
-}
+struct ExampleQueryModel(ElasticQueryModel);
 
 #[tonic::async_trait]
 impl TokenStore for ExampleQueryModel {
     async fn store_token(&self, token: i64) {
-        let hex_token = format!("{:x}", token);
-        let result = self
-            .es_client
-            .index(IndexParts::IndexId("tracking-token", "greeting"))
-            .body(json!({
-                "id": "greeting",
-                "token": hex_token,
-            }))
-            .send()
-            .await;
-        debug!("Elastic Search store token result: {:?}", result);
+        self.0.store_token(token).await;
     }
 
     async fn retrieve_token(&self) -> Result<i64> {
-        let response = self
-            .es_client
-            .get(GetParts::IndexId("tracking-token", "greeting"))
-            ._source(&["token"])
-            .send()
-            .await?;
-        let value = response.json::<Value>().await?;
-        debug!("Retrieved response value: {:?}", value);
-        if let Value::String(hex_token) = &value["_source"]["token"] {
-            let token = i64::from_str_radix(hex_token, 16)?;
-            debug!("Retrieved token: {:?}", token);
-            return Ok(token);
-        }
-        Ok(-1)
+        self.0.retrieve_token().await
+    }
+}
+
+impl ExampleQueryModel {
+    pub fn get_client(&self) -> &Elasticsearch {
+        &self.0.get_client()
     }
 }
 
@@ -69,7 +52,8 @@ async fn internal_process_events(axon_server_handle: AxonServerHandle) -> Result
     let client = wait_for_elastic_search().await?;
     debug!("Elastic Search client: {:?}", client);
 
-    let query_model = ExampleQueryModel { es_client: client };
+    let elastic_query_model = create_elastic_query_model(client, "greeting".to_string());
+    let query_model = ExampleQueryModel(elastic_query_model);
 
     let mut event_handler_registry: TheHandlerRegistry<
         ExampleQueryModel,
@@ -94,7 +78,7 @@ pub async fn handle_greeted_event(
         "Apply greeted event to ExampleQueryModel: {:?}",
         message.timestamp
     );
-    let es_client = query_model.es_client.clone();
+    let es_client = query_model.get_client();
     if let Some(Greeting { message }) = event.message.clone() {
         let value = message.clone();
         let mut hasher = Sha256::new();

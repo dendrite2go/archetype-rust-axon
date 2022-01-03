@@ -1,4 +1,3 @@
-use crate::elastic_search_utils::wait_for_elastic_search;
 use crate::proto_example::{Greeting, SearchQuery, SearchResponse};
 use anyhow::{Context, Result};
 use dendrite::axon_server::query::QueryRequest;
@@ -6,6 +5,7 @@ use dendrite::axon_utils::{
     axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry,
     QueryContext, QueryResult, TheHandlerRegistry,
 };
+use dendrite::elasticsearch::wait_for_elastic_search;
 use dendrite::macros as dendrite_macros;
 use elasticsearch::{Elasticsearch, SearchParts};
 use log::{debug, error};

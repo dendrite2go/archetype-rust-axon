@@ -6,7 +6,7 @@ use crate::proto_example::{
 use anyhow::{Error, Result};
 use bytes::Bytes;
 use dendrite::axon_utils::{
-    init_command_sender, query_events, AxonServerHandle, CommandSink, QuerySink,
+    init_command_sender, query_events, AxonServerHandle, QuerySink, SubmitCommand,
 };
 use dendrite::intellij_work_around::Debuggable;
 use futures_core::stream::Stream;
@@ -19,7 +19,7 @@ use tonic::{Request, Response, Status};
 
 /// Carries an `AxonServerHandle` and implements the `prost` generated `GreeterService`.
 ///
-/// The implementation uses implementations of `CommandSink` and `QuerySink` to send commands and queries to AxonServer.
+/// The `AxonServerHandle` can be used to send commands and queries to AxonServer.
 #[derive(Debug)]
 pub struct GreeterServer {
     pub axon_server_handle: AxonServerHandle,
@@ -40,9 +40,8 @@ impl GreeterService for GreeterServer {
             message: Some(inner_request),
         };
 
-        if let Some(serialized) = self
-            .axon_server_handle
-            .send_command("GreetCommand", &command)
+        if let Some(serialized) = SubmitCommand::new("GreetCommand", Box::new(command))
+            .send(&self.axon_server_handle)
             .await
             .map_err(to_status)?
         {
@@ -72,8 +71,8 @@ impl GreeterService for GreeterServer {
             aggregate_identifier: "xxx".to_string(),
         };
 
-        self.axon_server_handle
-            .send_command("RecordCommand", &command)
+        SubmitCommand::new("RecordCommand", Box::new(command))
+            .send(&self.axon_server_handle)
             .await
             .map_err(to_status)?;
 
@@ -92,8 +91,8 @@ impl GreeterService for GreeterServer {
             aggregate_identifier: "xxx".to_string(),
         };
 
-        self.axon_server_handle
-            .send_command("StopCommand", &command)
+        SubmitCommand::new("StopCommand", Box::new(command))
+            .send(&self.axon_server_handle)
             .await
             .map_err(to_status)?;
 

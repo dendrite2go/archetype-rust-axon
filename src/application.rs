@@ -1,6 +1,8 @@
 use dendrite::auth as dendrite_auth;
 use dendrite::axon_utils::platform_worker;
+use dendrite::elasticsearch::replica::Transcoders;
 use log::{debug, info, warn};
+use prost::Message;
 use std::error::Error;
 use tonic::transport::Server;
 use tonic::{Request, Status};
@@ -10,6 +12,9 @@ use crate::example_command::handle_commands;
 use crate::example_event::{process_events, trusted_generated};
 use crate::example_query::process_queries;
 use crate::proto_example::greeter_service_server::GreeterServiceServer;
+use crate::proto_example::{
+    GreetedEvent, PropertyChangedEvent, StartedRecordingEvent, StoppedRecordingEvent,
+};
 
 pub async fn application() -> Result<(), Box<dyn Error>> {
     let greeter_server = init().await.unwrap();
@@ -22,6 +27,25 @@ pub async fn application() -> Result<(), Box<dyn Error>> {
     tokio::spawn(handle_commands(greeter_server.axon_server_handle.clone()));
 
     tokio::spawn(process_events(greeter_server.axon_server_handle.clone()));
+
+    let transcoders = Transcoders::new()
+        .insert("GreetedEvent", Box::new(GreetedEvent::decode))
+        .insert(
+            "StartedRecordingEvent",
+            Box::new(StartedRecordingEvent::decode),
+        )
+        .insert(
+            "StoppedRecordingEvent",
+            Box::new(StoppedRecordingEvent::decode),
+        )
+        .insert(
+            "PropertyChangedEvent",
+            Box::new(PropertyChangedEvent::decode),
+        );
+    tokio::spawn(dendrite::elasticsearch::replica::process_events(
+        greeter_server.axon_server_handle.clone(),
+        transcoders,
+    ));
 
     trusted_generated::init()?;
     tokio::spawn(dendrite_auth::process_events(

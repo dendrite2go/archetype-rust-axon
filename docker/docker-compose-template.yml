@@ -97,10 +97,10 @@ services:
     networks:
       - ${ENSEMBLE_NAME}
     ports:
-    - target: '9200'
-      published: '9200'
-    - target: '9300'
-      published: '9300'
+    - target: 9200
+      published: 9200
+    - target: 9300
+      published: 9300
     environment:
       - "discovery.type=single-node"
     volumes:
