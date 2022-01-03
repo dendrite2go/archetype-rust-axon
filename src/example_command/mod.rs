@@ -7,8 +7,8 @@ use async_lock::Mutex;
 use dendrite::axon_server::command::Command;
 use dendrite::axon_utils::{
     command_worker, create_aggregate_definition, empty_aggregate_registry, empty_handler_registry,
-    AggregateContext, AggregateContextTrait, AggregateDefinition, ApplicableTo, AxonServerHandle,
-    HandlerRegistry, SerializedObject, TheHandlerRegistry,
+    AggregateContext, AggregateContextTrait, AggregateDefinition, AggregateRegistry, ApplicableTo,
+    AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry,
 };
 use dendrite::intellij_work_around::Debuggable;
 use dendrite::macros as dendrite_macros;
@@ -54,10 +54,7 @@ async fn internal_handle_commands(axon_server_handle: AxonServerHandle) -> Resul
     );
 
     let mut aggregate_registry = empty_aggregate_registry();
-    aggregate_registry.handlers.insert(
-        aggregate_definition.projection_name.clone(),
-        Arc::new(Arc::new(aggregate_definition)),
-    );
+    aggregate_registry.insert(Arc::new(Arc::new(aggregate_definition)))?;
 
     command_worker(axon_server_handle, &mut aggregate_registry)
         .await
@@ -75,11 +72,11 @@ async fn handle_greet_command(
     command: GreetCommand,
     aggregate_context: &mut AggregateContext<GreeterProjection>,
 ) -> Result<Option<Acknowledgement>> {
-    let greeting = command.message;
-    let message = greeting
-        .clone()
-        .map(|g| g.message)
-        .unwrap_or("-/-".to_string());
+    let message = command
+        .message
+        .as_ref()
+        .map(|g| &*g.message)
+        .unwrap_or("-/-");
     if message == "ERROR" {
         return Err(anyhow!("Panicked at reading 'ERROR'"));
     }
@@ -91,10 +88,8 @@ async fn handle_greet_command(
     }
     debug!("Recording, so proceed");
 
-    aggregate_context.emit(
-        "GreetedEvent",
-        Box::from(GreetedEvent { message: greeting }),
-    )?;
+    let greeting = command.message.clone();
+    aggregate_context.emit("GreetedEvent", Box::new(GreetedEvent { message: greeting }))?;
 
     Ok(Some(Acknowledgement {
         message: format!("ACK! {}", message),
@@ -112,7 +107,7 @@ async fn handle_record_command(
         debug!("Unnecessary RecordCommand");
         return Ok(None);
     }
-    aggregate_context.emit("StartedRecordingEvent", Box::from(StartedRecordingEvent {}))?;
+    aggregate_context.emit("StartedRecordingEvent", Box::new(StartedRecordingEvent {}))?;
     Ok(Some(Empty::default()))
 }
 
@@ -127,7 +122,7 @@ async fn handle_stop_command(
         debug!("Unnecessary StopCommand");
         return Ok(None);
     }
-    aggregate_context.emit("StoppedRecordingEvent", Box::from(StoppedRecordingEvent {}))?;
+    aggregate_context.emit("StoppedRecordingEvent", Box::new(StoppedRecordingEvent {}))?;
     Ok(Some(Empty::default()))
 }
 

@@ -68,7 +68,7 @@ async fn handle_search_query(
         for document in hits {
             if let serde_json::Value::String(message) = &document["_source"]["value"] {
                 let greeting = Greeting {
-                    message: message.clone(),
+                    message: message.to_string(),
                 };
                 greetings.push(greeting);
             }

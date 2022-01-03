@@ -79,17 +79,16 @@ pub async fn handle_greeted_event(
         message.timestamp
     );
     let es_client = query_model.get_client();
-    if let Some(Greeting { message }) = event.message.clone() {
-        let value = message.clone();
+    if let Some(Greeting { message }) = &event.message {
         let mut hasher = Sha256::new();
-        Digest::update(&mut hasher, &message);
+        Digest::update(&mut hasher, message);
         let hash: Vec<u8> = hasher.finalize().to_vec();
         let hash = base64::encode(hash);
         let response = es_client
             .index(IndexParts::IndexId("greetings", hash.as_str()))
             .body(json!({
                 "id": hash,
-                "value": value,
+                "value": message.to_string(),
             }))
             .send()
             .await;

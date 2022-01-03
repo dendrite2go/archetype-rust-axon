@@ -118,12 +118,12 @@ impl GreeterService for GreeterServer {
 
         tokio::spawn(async move {
             for event in &events[..] {
-                let event = event.clone();
-                if let Some(payload) = event.payload {
+                if let Some(payload) = &event.payload {
                     if payload.r#type == "GreetedEvent" {
-                        let greeted_event_message = GreetedEvent::decode(Bytes::from(payload.data))
-                            .ok()
-                            .map(|e| e.message);
+                        let greeted_event_message =
+                            GreetedEvent::decode(Bytes::from(payload.data.clone()))
+                                .ok()
+                                .map(|e| e.message);
                         if let Some(greeting) = greeted_event_message.flatten() {
                             debug!("Greeting: {:?}", greeting);
                             tx.send(Ok(greeting)).await.ok();
