@@ -293,7 +293,7 @@ dependencies = [
 
 [[package]]
 name = "dendrite"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "dendrite_auth",
  "dendrite_elasticsearch",
@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "dendrite_auth"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "dendrite_lib",
@@ -324,7 +324,7 @@ dependencies = [
 
 [[package]]
 name = "dendrite_elasticsearch"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "dendrite_lib"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "async-lock",

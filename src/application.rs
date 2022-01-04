@@ -1,6 +1,6 @@
 use dendrite::auth as dendrite_auth;
-use dendrite::axon_utils::platform_worker;
-use dendrite::elasticsearch::replica::Transcoders;
+use dendrite::axon_utils::platform_worker_for;
+use dendrite::elasticsearch::replica;
 use log::{debug, info, warn};
 use prost::Message;
 use std::error::Error;
@@ -18,41 +18,24 @@ use crate::proto_example::{
 
 pub async fn application() -> Result<(), Box<dyn Error>> {
     let greeter_server = init().await.unwrap();
+    let axon_server_handle = &greeter_server.axon_server_handle;
 
-    tokio::spawn(platform_worker(
-        greeter_server.axon_server_handle.clone(),
-        "Rustic",
-    ));
+    axon_server_handle.spawn(platform_worker_for("Rustic"));
 
-    tokio::spawn(handle_commands(greeter_server.axon_server_handle.clone()));
+    axon_server_handle.spawn_ref(&handle_commands);
+    axon_server_handle.spawn_ref(&process_events);
 
-    tokio::spawn(process_events(greeter_server.axon_server_handle.clone()));
-
-    let transcoders = Transcoders::new()
-        .insert("GreetedEvent", Box::new(GreetedEvent::decode))
-        .insert(
-            "StartedRecordingEvent",
-            Box::new(StartedRecordingEvent::decode),
-        )
-        .insert(
-            "StoppedRecordingEvent",
-            Box::new(StoppedRecordingEvent::decode),
-        )
-        .insert(
-            "PropertyChangedEvent",
-            Box::new(PropertyChangedEvent::decode),
-        );
-    tokio::spawn(dendrite::elasticsearch::replica::process_events(
-        greeter_server.axon_server_handle.clone(),
-        transcoders,
-    ));
+    let transcoders = replica::Transcoders::new()
+        .insert_ref("GreetedEvent", &GreetedEvent::decode)
+        .insert_ref("StartedRecordingEvent", &StartedRecordingEvent::decode)
+        .insert_ref("StoppedRecordingEvent", &StoppedRecordingEvent::decode)
+        .insert_ref("PropertyChangedEvent", &PropertyChangedEvent::decode);
+    axon_server_handle.spawn(replica::process_events_with(transcoders));
 
     trusted_generated::init()?;
-    tokio::spawn(dendrite_auth::process_events(
-        greeter_server.axon_server_handle.clone(),
-    ));
+    axon_server_handle.spawn_ref(&dendrite_auth::process_events);
 
-    tokio::spawn(process_queries(greeter_server.axon_server_handle.clone()));
+    axon_server_handle.spawn_ref(&process_queries);
 
     let addr = "0.0.0.0:8181".parse()?;
     info!("Starting gRPC server");
