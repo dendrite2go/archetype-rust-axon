@@ -3,13 +3,10 @@ use crate::proto_example::{
     StartedRecordingEvent, StopCommand, StoppedRecordingEvent,
 };
 use anyhow::{anyhow, Context, Result};
+use async_channel::Receiver;
 use async_lock::Mutex;
 use dendrite::axon_server::command::Command;
-use dendrite::axon_utils::{
-    command_worker, create_aggregate_definition, empty_aggregate_registry, empty_handler_registry,
-    AggregateContext, AggregateContextTrait, AggregateDefinition, AggregateRegistry, ApplicableTo,
-    AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry,
-};
+use dendrite::axon_utils::{command_worker, create_aggregate_definition, empty_aggregate_registry, empty_handler_registry, AggregateContext, AggregateContextTrait, AggregateDefinition, AggregateRegistry, ApplicableTo, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, WorkerCommand};
 use dendrite::intellij_work_around::Debuggable;
 use dendrite::macros as dendrite_macros;
 use log::{debug, error};
@@ -20,7 +17,7 @@ use std::sync::Arc;
 /// Handles commands for the example application.
 ///
 /// Constructs an aggregate registry and delegates to function `command_worker`.
-pub async fn handle_commands(axon_server_handle: AxonServerHandle) {
+pub async fn handle_commands(axon_server_handle: AxonServerHandle, _control_channel: Receiver<WorkerCommand>) {
     if let Err(e) = internal_handle_commands(axon_server_handle).await {
         error!("Error while handling commands: {:?}", e);
     }

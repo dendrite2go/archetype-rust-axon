@@ -19,6 +19,13 @@ if [[ ".$1" = '.--tee' ]]
 then
     exec > >(tee "$2") 2>&1
     shift 2
+elif [[ ".$1" = '.--tee-time' ]]
+then
+    TIMESTAMP="$(date '+%Y%m%dT%H%M')"
+    LOG_FILE="${PROJECT}/data/local/build-and-run-${TIMESTAMP}.log"
+    info "LOG_FILE=[${LOG_FILE}]"
+    exec > >(tee "${LOG_FILE}") 2>&1
+    shift
 fi
 
 DO_BUILD='true'
@@ -104,7 +111,7 @@ function waitForDockerComposeReady() {
     if "${DO_BUILD}"
     then
         info "Build rust docker image"
-        docker build -t "${DOCKER_REPOSITORY}/rust" docker/rust
+        docker build --build-arg RUST_TAG="${RUST_TAG}" -t "${DOCKER_REPOSITORY}/rust" docker/rust
 
         if "${DO_BUILD_BACK_END}"
         then

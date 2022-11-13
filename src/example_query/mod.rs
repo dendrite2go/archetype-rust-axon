@@ -1,10 +1,8 @@
 use crate::proto_example::{Greeting, SearchQuery, SearchResponse};
 use anyhow::{Context, Result};
+use async_channel::Receiver;
 use dendrite::axon_server::query::QueryRequest;
-use dendrite::axon_utils::{
-    axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry,
-    QueryContext, QueryResult, TheHandlerRegistry,
-};
+use dendrite::axon_utils::{axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry, QueryContext, QueryResult, TheHandlerRegistry, WorkerCommand};
 use dendrite::elasticsearch::wait_for_elastic_search;
 use dendrite::macros as dendrite_macros;
 use elasticsearch::{Elasticsearch, SearchParts};
@@ -21,7 +19,7 @@ impl QueryContext for ExampleQueryContext {}
 /// Handles queries for the example application.
 ///
 /// Constructs an query handler registry and delegates to function `query_processor`.
-pub async fn process_queries(axon_server_handle: AxonServerHandle) {
+pub async fn process_queries(axon_server_handle: AxonServerHandle, _control_channel: Receiver<WorkerCommand>) {
     if let Err(e) = internal_process_queries(axon_server_handle).await {
         error!("Error while handling queries: {:?}", e);
     }

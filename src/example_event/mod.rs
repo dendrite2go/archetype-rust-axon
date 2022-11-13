@@ -1,10 +1,8 @@
 use crate::proto_example::{GreetedEvent, Greeting};
 use anyhow::{Context, Result};
+use async_channel::Receiver;
 use dendrite::axon_server::event::Event;
-use dendrite::axon_utils::{
-    empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle,
-    TheHandlerRegistry, TokenStore,
-};
+use dendrite::axon_utils::{empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle, TheHandlerRegistry, TokenStore, WorkerCommand};
 use dendrite::elasticsearch::{
     create_elastic_query_model, wait_for_elastic_search, ElasticQueryModel,
 };
@@ -41,7 +39,7 @@ impl ExampleQueryModel {
 /// Handles events for the example application.
 ///
 /// Constructs an event handler registry and delegates to function `event_processor`.
-pub async fn process_events(axon_server_handle: AxonServerHandle) {
+pub async fn process_events(axon_server_handle: AxonServerHandle, _control_channel: Receiver<WorkerCommand>) {
     if let Err(e) = internal_process_events(axon_server_handle).await {
         error!("Error while handling commands: {:?}", e);
     }
