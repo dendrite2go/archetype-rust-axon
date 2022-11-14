@@ -1,15 +1,18 @@
 use dendrite::auth as dendrite_auth;
-use dendrite::axon_utils::{AxonServerHandle, AxonServerHandleAsyncTrait, platform_worker_for};
+use dendrite::axon_utils::{AxonServerHandle, AxonServerHandleAsyncTrait, platform_worker_for, WorkerCommand};
 use dendrite::elasticsearch::replica;
 use log::{debug, error, info, warn};
 use prost::Message;
 use std::error::Error;
 use anyhow::anyhow;
+use async_channel::{bounded, Receiver};
+use dendrite::axon_utils::WorkerCommand::Unsubscribe;
 use futures_util::FutureExt;
+use tokio::signal::unix::{signal,SignalKind};
 use tonic::transport::Server;
 use tonic::{Request, Status};
 use uuid::Uuid;
-use crate::example_api::init;
+use crate::example_api::{GreeterServer, init};
 use crate::example_command::handle_commands;
 use crate::example_event::{process_events, trusted_generated};
 use crate::example_query::process_queries;
@@ -19,6 +22,7 @@ use crate::proto_example::{
 };
 
 pub async fn application() -> Result<(), Box<dyn Error>> {
+    let signal_stream = signal(SignalKind::terminate())?;
     let greeter_server = init().await.unwrap();
     let axon_server_handle = &greeter_server.axon_server_handle.clone();
 
@@ -39,27 +43,66 @@ pub async fn application() -> Result<(), Box<dyn Error>> {
 
     axon_server_handle.spawn_ref("Query",&process_queries)?;
 
-    let addr = "0.0.0.0:8181".parse()?;
     info!("Starting gRPC server");
+    let (tx, rx) = bounded(10);
+    let id = axon_server_handle.spawn("gRPC server", Box::new(|handle, control_channel| {
+        Box::pin(
+            run_server(greeter_server, control_channel)
+                .then(|result| {
+                    send_termination_notification(
+                        handle,
+                        result.map_err(|e| anyhow!(e.to_string())),
+                        "gRPC Server",
+                        rx
+                    )
+                })
+        )
+    }))?;
+    tx.send(id).await.map_err(|e| {
+        error!("Error sending server id: {:?}", e);
+        e
+    })?;
+
+    let mut signal = Some(signal_stream);
+    axon_server_handle.join_workers_with_signal(&mut signal).await?;
+    Ok(())
+}
+
+async fn run_server(greeter_server: GreeterServer, control_channel: Receiver<WorkerCommand>) -> anyhow::Result<()> {
+    let (tx, rx) = bounded(10);
+    let addr = "0.0.0.0:8181".parse()?;
     let server = Server::builder()
         .add_service(GreeterServiceServer::with_interceptor(
             greeter_server,
             interceptor,
         ))
-        .serve(addr);
-    axon_server_handle.spawn("gRPC server", Box::new(|handle,_control_channel| {
-        Box::pin(server.then(|result| send_termination_notification(handle, result.map_err(|e| anyhow!(e.to_string())), "gRPC Server", Uuid::new_v4())))
-    }))?;
-
-    axon_server_handle.join_workers().await?;
-    Ok(())
+        .serve_with_shutdown(addr, rx.recv().map(|_r|()));
+    loop {
+        let command = control_channel.recv().await?;
+        if command == Unsubscribe {
+            break;
+        }
+    }
+    tx.send(()).await.map_err(|e|{
+        error!("Error sending termination notice to gRPC server: {:?}", e);
+        e
+    })?;
+    server.await.map_err(|e| anyhow!(e))
 }
 
-async fn send_termination_notification<S: Into<String>>(handle: AxonServerHandle, result: anyhow::Result<()>, label: S, id: Uuid) {
+async fn send_termination_notification<S: Into<String>>(handle: AxonServerHandle, result: anyhow::Result<()>, label: S, id: Receiver<Uuid>) {
     let label = &*label.into();
     if let Err(e) = result {
         error!("Error in worker: {:?}: {:?}", label, e)
     }
+    let id = match id.recv().await {
+        Ok(id) =>
+            id,
+        Err(e) => {
+            error!("No id received: {:?}", e);
+            Uuid::new_v4()
+        }
+    };
     if let Err(e) = handle.notify.send(id).await {
         error!("Termination notification send failed: {:?}: {:?}", label, e)
     }
