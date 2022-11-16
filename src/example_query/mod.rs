@@ -1,8 +1,7 @@
 use crate::proto_example::{Greeting, SearchQuery, SearchResponse};
 use anyhow::{Context, Result};
-use async_channel::Receiver;
 use dendrite::axon_server::query::QueryRequest;
-use dendrite::axon_utils::{axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry, QueryContext, QueryResult, TheHandlerRegistry, WorkerCommand};
+use dendrite::axon_utils::{axon_serialize, empty_handler_registry, query_processor, AxonServerHandle, HandlerRegistry, QueryContext, QueryResult, TheHandlerRegistry, WorkerControl};
 use dendrite::elasticsearch::wait_for_elastic_search;
 use dendrite::macros as dendrite_macros;
 use elasticsearch::{Elasticsearch, SearchParts};
@@ -16,17 +15,17 @@ struct ExampleQueryContext {
 
 impl QueryContext for ExampleQueryContext {}
 
-/// Handles queries for the example application.
+/// Handles queries.
 ///
 /// Constructs an query handler registry and delegates to function `query_processor`.
-pub async fn process_queries(axon_server_handle: AxonServerHandle, _control_channel: Receiver<WorkerCommand>) {
-    if let Err(e) = internal_process_queries(axon_server_handle).await {
+pub async fn process_queries(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) {
+    if let Err(e) = internal_process_queries(axon_server_handle, worker_control).await {
         error!("Error while handling queries: {:?}", e);
     }
-    debug!("Stopped handling commands for example application");
+    debug!("Stopped handling queries");
 }
 
-async fn internal_process_queries(axon_server_handle: AxonServerHandle) -> Result<()> {
+async fn internal_process_queries(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) -> Result<()> {
     let client = wait_for_elastic_search().await?;
     debug!("Elastic Search client: {:?}", client);
 
@@ -40,7 +39,7 @@ async fn internal_process_queries(axon_server_handle: AxonServerHandle) -> Resul
 
     query_handler_registry.register(&handle_search_query)?;
 
-    query_processor(axon_server_handle, query_context, query_handler_registry)
+    query_processor(axon_server_handle, query_context, query_handler_registry, worker_control)
         .await
         .context("Error while handling queries")
 }

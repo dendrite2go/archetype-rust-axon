@@ -1,8 +1,7 @@
 use crate::proto_example::{GreetedEvent, Greeting};
 use anyhow::{Context, Result};
-use async_channel::Receiver;
 use dendrite::axon_server::event::Event;
-use dendrite::axon_utils::{empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle, TheHandlerRegistry, TokenStore, WorkerCommand};
+use dendrite::axon_utils::{empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle, TheHandlerRegistry, TokenStore, WorkerControl};
 use dendrite::elasticsearch::{
     create_elastic_query_model, wait_for_elastic_search, ElasticQueryModel,
 };
@@ -36,17 +35,17 @@ impl ExampleQueryModel {
     }
 }
 
-/// Handles events for the example application.
+/// Handles events.
 ///
 /// Constructs an event handler registry and delegates to function `event_processor`.
-pub async fn process_events(axon_server_handle: AxonServerHandle, _control_channel: Receiver<WorkerCommand>) {
-    if let Err(e) = internal_process_events(axon_server_handle).await {
+pub async fn process_events(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) {
+    if let Err(e) = internal_process_events(axon_server_handle, worker_control).await {
         error!("Error while handling commands: {:?}", e);
     }
-    debug!("Stopped handling commands for example application");
+    debug!("Stopped handling events");
 }
 
-async fn internal_process_events(axon_server_handle: AxonServerHandle) -> Result<()> {
+async fn internal_process_events(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) -> Result<()> {
     let client = wait_for_elastic_search().await?;
     debug!("Elastic Search client: {:?}", client);
 
@@ -61,7 +60,7 @@ async fn internal_process_events(axon_server_handle: AxonServerHandle) -> Result
 
     register!(event_handler_registry, handle_greeted_event)?;
 
-    event_processor(axon_server_handle, query_model, event_handler_registry)
+    event_processor(axon_server_handle, query_model, event_handler_registry, worker_control)
         .await
         .context("Error while handling commands")
 }

@@ -3,10 +3,9 @@ use crate::proto_example::{
     StartedRecordingEvent, StopCommand, StoppedRecordingEvent,
 };
 use anyhow::{anyhow, Context, Result};
-use async_channel::Receiver;
 use async_lock::Mutex;
 use dendrite::axon_server::command::Command;
-use dendrite::axon_utils::{command_worker, create_aggregate_definition, empty_aggregate_registry, empty_handler_registry, AggregateContext, AggregateContextTrait, AggregateDefinition, AggregateRegistry, ApplicableTo, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, WorkerCommand};
+use dendrite::axon_utils::{command_worker, create_aggregate_definition, empty_aggregate_registry, empty_handler_registry, AggregateContext, AggregateContextTrait, AggregateDefinition, AggregateRegistry, ApplicableTo, AxonServerHandle, HandlerRegistry, SerializedObject, TheHandlerRegistry, WorkerControl};
 use dendrite::intellij_work_around::Debuggable;
 use dendrite::macros as dendrite_macros;
 use log::{debug, error};
@@ -14,18 +13,18 @@ use prost::Message;
 use std::ops::Deref;
 use std::sync::Arc;
 
-/// Handles commands for the example application.
+/// Handles commands.
 ///
 /// Constructs an aggregate registry and delegates to function `command_worker`.
-pub async fn handle_commands(axon_server_handle: AxonServerHandle, _control_channel: Receiver<WorkerCommand>) {
-    if let Err(e) = internal_handle_commands(axon_server_handle).await {
+pub async fn handle_commands(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) {
+    if let Err(e) = internal_handle_commands(axon_server_handle, worker_control).await {
         error!("Error while handling commands: {:?}", e);
     }
-    debug!("Stopped handling commands for example application");
+    debug!("Stopped handling commands");
 }
 
-async fn internal_handle_commands(axon_server_handle: AxonServerHandle) -> Result<()> {
-    debug!("Handle commands for example application");
+async fn internal_handle_commands(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) -> Result<()> {
+    debug!("Handle commands: {:?}", worker_control.get_label());
     debug!("Axon server handle: {:?}", &axon_server_handle);
 
     let mut sourcing_handler_registry = empty_handler_registry();
@@ -53,7 +52,7 @@ async fn internal_handle_commands(axon_server_handle: AxonServerHandle) -> Resul
     let mut aggregate_registry = empty_aggregate_registry();
     aggregate_registry.insert(Arc::new(Arc::new(aggregate_definition)))?;
 
-    command_worker(axon_server_handle, &mut aggregate_registry)
+    command_worker(axon_server_handle, &mut aggregate_registry, worker_control)
         .await
         .context("Error while handling commands")
 }

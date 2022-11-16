@@ -1,12 +1,11 @@
 use dendrite::auth as dendrite_auth;
-use dendrite::axon_utils::{AxonServerHandle, AxonServerHandleAsyncTrait, platform_worker_for, WorkerCommand};
+use dendrite::axon_utils::{AxonServerHandle, AxonServerHandleAsyncTrait, platform_worker_for, WorkerControl};
 use dendrite::elasticsearch::replica;
 use log::{debug, error, info, warn};
 use prost::Message;
 use std::error::Error;
 use anyhow::anyhow;
 use async_channel::{bounded, Receiver};
-use dendrite::axon_utils::WorkerCommand::Unsubscribe;
 use futures_util::FutureExt;
 use tokio::signal::unix::{signal,SignalKind};
 use tonic::transport::Server;
@@ -68,26 +67,17 @@ pub async fn application() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-async fn run_server(greeter_server: GreeterServer, control_channel: Receiver<WorkerCommand>) -> anyhow::Result<()> {
-    let (tx, rx) = bounded(10);
+async fn run_server(greeter_server: GreeterServer, worker_control: WorkerControl) -> anyhow::Result<()> {
+    debug!("Run server: {:?}", worker_control.get_label());
+    let control_channel = worker_control.get_control_channel().clone();
     let addr = "0.0.0.0:8181".parse()?;
-    let server = Server::builder()
+    Server::builder()
         .add_service(GreeterServiceServer::with_interceptor(
             greeter_server,
             interceptor,
         ))
-        .serve_with_shutdown(addr, rx.recv().map(|_r|()));
-    loop {
-        let command = control_channel.recv().await?;
-        if command == Unsubscribe {
-            break;
-        }
-    }
-    tx.send(()).await.map_err(|e|{
-        error!("Error sending termination notice to gRPC server: {:?}", e);
-        e
-    })?;
-    server.await.map_err(|e| anyhow!(e))
+        .serve_with_shutdown(addr, control_channel.recv().map(|_r|()))
+        .await.map_err(|e| anyhow!(e))
 }
 
 async fn send_termination_notification<S: Into<String>>(handle: AxonServerHandle, result: anyhow::Result<()>, label: S, id: Receiver<Uuid>) {
