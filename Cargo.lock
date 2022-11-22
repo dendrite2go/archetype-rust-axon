@@ -363,7 +363,9 @@ dependencies = [
 
 [[package]]
 name = "dendrite"
-version = "0.11.0"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8250b0952d41b7bb3e15a2b0352e62b2c8f84a731fba0a2d931139169538928"
 dependencies = [
  "dendrite_auth",
  "dendrite_elasticsearch",
@@ -373,7 +375,9 @@ dependencies = [
 
 [[package]]
 name = "dendrite_auth"
-version = "0.8.0"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7fdd03e8b0c977fc76e5a4763f9aa8c47ef56310ac577b57db2bc901ca198a2"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -396,7 +400,9 @@ dependencies = [
 
 [[package]]
 name = "dendrite_elasticsearch"
-version = "0.3.0"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f2b3eaeaee4260482265d8c57b4b86ebfdfcaa5bed2e729b0e2e8bfe394aa3a"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -448,7 +454,9 @@ dependencies = [
 
 [[package]]
 name = "dendrite_lib"
-version = "0.11.0"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45358d5cc7b41e8db7b245557098a6da0c6abaca62b197d830a74c1ee8b3044d"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -474,6 +482,8 @@ dependencies = [
 [[package]]
 name = "dendrite_macros"
 version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd30e67297d2d19d5d6bf0a87f6fa125dd02c054db83b15a9e704b5ed9b68624"
 dependencies = [
  "anyhow",
  "log",
