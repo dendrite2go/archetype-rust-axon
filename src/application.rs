@@ -13,7 +13,7 @@ use tonic::{Request, Status};
 use uuid::Uuid;
 use crate::example_api::{GreeterServer, init};
 use crate::example_command::handle_commands;
-use crate::example_event::{process_events, trusted_generated};
+use crate::example_event::{process_events_elastic, process_events_mongo, trusted_generated};
 use crate::example_query::process_queries;
 use crate::proto_example::greeter_service_server::GreeterServiceServer;
 use crate::proto_example::{
@@ -28,7 +28,8 @@ pub async fn application() -> Result<(), Box<dyn Error>> {
     axon_server_handle.spawn("Platform", platform_worker_for("Rustic"))?;
 
     axon_server_handle.spawn_ref("Command", &handle_commands)?;
-    axon_server_handle.spawn_ref("Event", &process_events)?;
+    axon_server_handle.spawn_ref("Elastic", &process_events_elastic)?;
+    axon_server_handle.spawn_ref("Mongo", &process_events_mongo_example)?;
 
     let transcoders = replica::Transcoders::new()
         .insert_ref("GreetedEvent", &GreetedEvent::decode)
@@ -65,6 +66,10 @@ pub async fn application() -> Result<(), Box<dyn Error>> {
     let mut signal = Some(signal_stream);
     axon_server_handle.join_workers_with_signal(&mut signal).await?;
     Ok(())
+}
+
+async fn process_events_mongo_example(axon_server_handle: AxonServerHandle, worker_control: WorkerControl) {
+    process_events_mongo("mongodb://mongodb:27017/example", axon_server_handle, worker_control).await
 }
 
 async fn run_server(greeter_server: GreeterServer, worker_control: WorkerControl) -> anyhow::Result<()> {
