@@ -26,7 +26,7 @@ services:
       source: axon-eventdata
       target: /eventdata
   ${ENSEMBLE_NAME}-command-api:
-    image: rust:latest
+    image: rust:${RUST_TAG}
     working_dir: ${PROJECT}/target
     command:
       - "linux/debug/dendrite_example"
@@ -107,6 +107,18 @@ services:
       - type: volume
         source: elastic-search-data
         target: /usr/share/elasticsearch/data
+  mongodb:
+    image: mongodb/mongodb-community-server:${MONGODB_VERSION}
+    init: true
+    networks:
+      - ${ENSEMBLE_NAME}
+    ports:
+      - target: 27017
+        published: 27017
+    volumes:
+      - type: volume
+        source: mongodb-data
+        target: /data
   inject-config:
     image: dendrite2go/configmanager
     init: true
@@ -132,5 +144,6 @@ volumes:
   axon-data:
   axon-eventdata:
   elastic-search-data:
+  mongodb-data:
   ${NIX_STORE_VOLUME}:
     external: true
