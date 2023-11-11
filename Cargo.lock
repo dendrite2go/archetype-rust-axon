@@ -556,6 +556,7 @@ dependencies = [
  "jwt",
  "lazy_static",
  "log",
+ "mongodb",
  "pem",
  "prost",
  "rand_core",
