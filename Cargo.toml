@@ -19,7 +19,7 @@ async-lock = "^2.3"
 async-stream = "^0.3"
 base64 = "0.13.0"
 bytes = "^1.0"
-dendrite = { path = "../dendrite/dendrite", features = ["all"], version = "^0.12" } # path = "../dendrite/dendrite", #
+dendrite = { features = ["all"], version = "^0.13" } # path = "../dendrite/dendrite", #
 elasticsearch = "7.14.0-alpha.1"
 env_logger = "^0.9"
 futures-core = "^0.3"
