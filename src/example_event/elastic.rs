@@ -1,5 +1,6 @@
 use crate::proto_example::{GreetedEvent, Greeting};
 use anyhow::{Context, Result};
+use base64::Engine;
 use dendrite::axon_server::event::Event;
 use dendrite::axon_utils::{empty_handler_registry, event_processor, AsyncApplicableTo, AxonServerHandle, TheHandlerRegistry, TokenStore, WorkerControl};
 use dendrite::elasticsearch::{
@@ -78,7 +79,7 @@ pub async fn handle_greeted_event(
         let mut hasher = Sha256::new();
         Digest::update(&mut hasher, message);
         let hash: Vec<u8> = hasher.finalize().to_vec();
-        let hash = base64::encode(hash);
+        let hash = base64::engine::general_purpose::STANDARD.encode(hash);
         let response = es_client
             .index(IndexParts::IndexId("greetings", hash.as_str()))
             .body(json!({
