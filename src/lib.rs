@@ -9,5 +9,9 @@ pub mod example_api;
 pub mod example_command;
 pub mod example_event;
 pub mod example_query;
-pub mod proto_dendrite_config;
-pub mod proto_example;
+pub mod proto_dendrite_config {
+    tonic::include_proto!("proto_dendrite_config");
+}
+pub mod proto_example {
+    tonic::include_proto!("proto_example");
+}
